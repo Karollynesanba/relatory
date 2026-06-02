@@ -49,6 +49,32 @@ type SendPersistedReportResult = {
   duplicateReason?: "already-sent" | "in-flight"
 }
 
+function parseWhatsAppGroupTarget(value: string | null | undefined) {
+  const rawValue = value?.trim()
+
+  if (!rawValue) {
+    return null
+  }
+
+  const separatorIndex = rawValue.indexOf("::")
+  const instance =
+    separatorIndex >= 0 ? rawValue.slice(0, separatorIndex).trim() : null
+  const groupId =
+    separatorIndex >= 0
+      ? rawValue.slice(separatorIndex + 2).trim()
+      : rawValue
+  const normalizedGroupId = normalizeWhatsAppGroupId(groupId)
+
+  if (!normalizedGroupId) {
+    return null
+  }
+
+  return {
+    groupId: normalizedGroupId,
+    instance: instance || null,
+  }
+}
+
 function resolveReportMessage(params: {
   reportId: string
   payload: NonNullable<ReturnType<typeof parseStoredReportPayload>>
@@ -128,13 +154,11 @@ export async function sendPersistedReportNow(
     throw new Error("Relatório ainda não foi gerado")
   }
 
-  const targetGroupId =
-    normalizeWhatsAppGroupId(options?.groupId)
-    || normalizeWhatsAppGroupId(report.client.whatsappGroupId)
-    || options?.groupId?.trim()
-    || report.client.whatsappGroupId
+  const targetGroup =
+    parseWhatsAppGroupTarget(options?.groupId)
+    ?? parseWhatsAppGroupTarget(report.client.whatsappGroupId)
 
-  if (!targetGroupId) {
+  if (!targetGroup) {
     throw new Error("Cliente sem grupo de WhatsApp configurado")
   }
 
@@ -149,9 +173,10 @@ export async function sendPersistedReportNow(
 
   const mode = options?.mode ?? "PDF_AND_MESSAGE"
   const pdfStrategy = options?.pdfStrategy ?? "auto"
+  const preferredInstance = targetGroup.instance ?? options?.instance ?? null
   const resolvedInstance = await resolveEvolutionInstanceForDestination(
-    targetGroupId,
-    options?.instance ?? null
+    targetGroup.groupId,
+    preferredInstance
   )
   const latestSuccessfulSend = report.sendLogs.find(
     (sendLog) => sendLog.status === "OK" && Boolean(sendLog.sentAt)
@@ -221,19 +246,19 @@ export async function sendPersistedReportNow(
         })}.pdf`
 
       await sendWhatsAppDocument({
-        number: targetGroupId,
+        number: targetGroup.groupId,
         fileName,
         contentBase64: pdfBuffer.toString("base64"),
-        instance: options?.instance ?? null,
+        instance: preferredInstance,
         resolvedInstance,
       })
     }
 
     if (mode === "PDF_AND_MESSAGE" || mode === "MESSAGE_ONLY") {
       await sendWhatsAppText({
-        number: targetGroupId,
+        number: targetGroup.groupId,
         text: message,
-        instance: options?.instance ?? null,
+        instance: preferredInstance,
         resolvedInstance,
       })
     }
