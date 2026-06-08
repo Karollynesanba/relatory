@@ -5,7 +5,7 @@ const CLIENT_COMPANY_MAX_LENGTH = 120
 const CLIENT_EMAIL_MAX_LENGTH = 160
 const CLIENT_PHONE_MAX_LENGTH = 25
 const CLIENT_NOTES_MAX_LENGTH = 1000
-const CLIENT_WHATSAPP_GROUP_MAX_LENGTH = 60
+const CLIENT_WHATSAPP_GROUP_MAX_LENGTH = 120
 const CLIENT_AD_ACCOUNT_NAME_MAX_LENGTH = 120
 
 function trimString(value: unknown) {
@@ -13,7 +13,7 @@ function trimString(value: unknown) {
 }
 
 function isValidWhatsAppGroupId(value: string) {
-  return /^(?:\d{10,25}-\d+|\d{12,30})@g\.us$/i.test(value)
+  return /^(?:(?:[^:\s][^:]*?)::)?(?:\d{10,25}-\d+|\d{12,30})@g\.us$/i.test(value)
 }
 
 function optionalTrimmedString(maxLength: number, label: string) {

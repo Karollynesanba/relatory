@@ -11,6 +11,21 @@ function normalizeInstanceKey(value: string | null | undefined) {
     .replace(/\s+/g, " ")
 }
 
+function buildGroupOptionValue(instance: string, groupId: string) {
+  return `${instance}::${groupId}`
+}
+
+function normalizeGroupSelection(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? ""
+  const separatorIndex = trimmed.indexOf("::")
+
+  if (separatorIndex < 0) {
+    return trimmed
+  }
+
+  return trimmed.slice(separatorIndex + 2).trim()
+}
+
 type SharedClientFields = Pick<
   ClientFormValues,
   "email" | "phone" | "notes" | "whatsappGroupId"
@@ -79,6 +94,15 @@ export function ClientForm({
       )
     : availableGroups
   const visibleGroups = filteredGroups.length > 0 ? filteredGroups : availableGroups
+  const manualGroupValue = normalizeGroupSelection(values.whatsappGroupId)
+  const selectedGroupValue =
+    visibleGroups
+      .map((group) => buildGroupOptionValue(group.instance, group.id))
+      .find((value) => {
+        const rawGroupId = normalizeGroupSelection(value)
+
+        return values.whatsappGroupId === value || manualGroupValue === rawGroupId
+      }) ?? ""
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
@@ -172,11 +196,7 @@ export function ClientForm({
                   {groupsResponse.instances.length} instância(s) detectada(s) nesta integração.
                 </p>
                 <select
-                  value={
-                    visibleGroups.some((group) => group.id === values.whatsappGroupId)
-                      ? values.whatsappGroupId
-                      : ""
-                  }
+                  value={selectedGroupValue}
                   onChange={(event) =>
                     onValueChange?.("whatsappGroupId", event.target.value)
                   }
@@ -184,7 +204,10 @@ export function ClientForm({
                 >
                   <option value="">Selecione um grupo para preencher o campo</option>
                   {visibleGroups.map((group) => (
-                    <option key={`${group.instance}:${group.id}`} value={group.id}>
+                    <option
+                      key={`${group.instance}:${group.id}`}
+                      value={buildGroupOptionValue(group.instance, group.id)}
+                    >
                       [{group.instance}] {group.subject} - {group.size} participante(s)
                     </option>
                   ))}
@@ -194,11 +217,11 @@ export function ClientForm({
           </div>
           <input
             name="whatsappGroupId"
-            value={values.whatsappGroupId}
+            value={manualGroupValue}
             onChange={onChange}
             type="text"
             placeholder="120363407411420148@g.us"
-            maxLength={60}
+            maxLength={120}
             className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C1121F]"
           />
           <p className="mt-2 text-xs text-gray-400">

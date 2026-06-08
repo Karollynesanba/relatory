@@ -502,6 +502,15 @@ type EvolutionGroupResponseItem = {
   isSaved?: boolean
 }
 
+type EvolutionGroupResponseEnvelope = {
+  groups?: unknown
+  data?: unknown
+  response?: {
+    groups?: unknown
+    data?: unknown
+  }
+}
+
 export function getEvolutionConfig() {
   const apiUrl = normalizeEnvValue(process.env.EVOLUTION_API_URL)
   const apiKey = normalizeEnvValue(process.env.EVOLUTION_API_KEY)
@@ -732,26 +741,53 @@ function mergeEvolutionGroups(
   return [...merged.values()]
 }
 
+function extractEvolutionGroupItems(data: unknown): EvolutionGroupResponseItem[] | null {
+  if (Array.isArray(data)) {
+    return data as EvolutionGroupResponseItem[]
+  }
+
+  if (!data || typeof data !== "object") {
+    return null
+  }
+
+  const envelope = data as EvolutionGroupResponseEnvelope
+  const candidates = [
+    envelope.groups,
+    envelope.data,
+    envelope.response?.groups,
+    envelope.response?.data,
+  ]
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as EvolutionGroupResponseItem[]
+    }
+  }
+
+  return null
+}
+
 async function fetchEvolutionGroupsForInstance(
   config: EvolutionConfig,
   instance: string
 ) {
   const encodedInstance = encodeURIComponent(instance)
-  const data = await fetchEvolutionJson<EvolutionGroupResponseItem[]>({
+  const data = await fetchEvolutionJson<unknown>({
     apiUrl: config.apiUrl,
     apiKey: config.apiKey,
     path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=false`,
     timeoutMs: 45_000,
   })
+  const groupsData = extractEvolutionGroupItems(data)
 
-  if (!Array.isArray(data)) {
+  if (!groupsData) {
     throw new Error("fetchAllGroups retornou resposta inválida")
   }
 
   const mergedGroups = mergeEvolutionGroups([
     {
       instance,
-      groups: data
+      groups: groupsData
         .map((group) => mapEvolutionGroupResponseItem(group, instance))
         .filter((group): group is EvolutionGroup => Boolean(group)),
     },
