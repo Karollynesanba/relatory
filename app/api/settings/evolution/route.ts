@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       user.evolutionInstance ?? null
     )
     const config = getEvolutionConfig()
-    const effectiveGroupInstance = previewInstance || selectedInstance || null
+    const effectiveGroupInstance = previewInstance || null
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({
