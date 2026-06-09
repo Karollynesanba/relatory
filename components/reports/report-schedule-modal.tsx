@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Calendar, Clock3, Loader2, RefreshCw, Repeat, Users, X } from "lucide-react"
 import {
+  EvolutionGroupCombobox,
+  normalizeEvolutionGroupId,
+} from "@/components/shared/evolution-group-combobox"
+import {
   disableClientSavedReportSchedule,
   loadClientReportSchedule,
   loadEvolutionSettings,
@@ -22,13 +26,6 @@ import type {
   ReportSendMode,
 } from "@/types/report.types"
 import type { EvolutionSettingsResponse } from "@/types/evolution.types"
-
-function normalizeInstanceKey(value: string | null | undefined) {
-  return (value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-}
 
 type ReportScheduleModalProps = {
   open: boolean
@@ -82,21 +79,6 @@ function buildInitialForm(props: Pick<
     message: props.defaultMessage,
     groupId: props.defaultGroupId ?? "",
   }
-}
-
-function buildGroupOptionValue(instance: string, groupId: string) {
-  return `${instance}::${groupId}`
-}
-
-function normalizeGroupSelection(value: string) {
-  const trimmed = value.trim()
-  const separatorIndex = trimmed.indexOf("::")
-
-  if (separatorIndex < 0) {
-    return trimmed
-  }
-
-  return trimmed.slice(separatorIndex + 2).trim()
 }
 
 export function ReportScheduleModal(props: ReportScheduleModalProps) {
@@ -212,26 +194,7 @@ export function ReportScheduleModal(props: ReportScheduleModalProps) {
     [form.hour, form.minute]
   )
   const availableGroups = groupsResponse?.groups ?? []
-  const activeInstance =
-    groupsResponse?.previewInstance ??
-    groupsResponse?.selectedInstance ??
-    null
-  const filteredGroups = activeInstance
-    ? availableGroups.filter(
-        (group) =>
-          normalizeInstanceKey(group.instance) === normalizeInstanceKey(activeInstance)
-      )
-    : availableGroups
-  const visibleGroups = filteredGroups.length > 0 ? filteredGroups : availableGroups
-  const manualGroupValue = normalizeGroupSelection(form.groupId)
-  const selectedGroupValue =
-    visibleGroups
-      .map((group) => buildGroupOptionValue(group.instance, group.id))
-      .find((value) => {
-        const rawGroupId = normalizeGroupSelection(value)
-
-        return form.groupId === value || form.groupId === rawGroupId
-      }) ?? ""
+  const manualGroupValue = normalizeEvolutionGroupId(form.groupId)
 
   if (!props.open || !primaryClientId) {
     return null
@@ -542,35 +505,26 @@ export function ReportScheduleModal(props: ReportScheduleModalProps) {
                   <p className="text-xs text-rose-600">
                     {groupsResponse.detail ?? "Não foi possível consultar os grupos."}
                   </p>
-                  ) : visibleGroups.length === 0 ? (
+                ) : availableGroups.length === 0 ? (
                   <p className="text-xs text-slate-500">
-                    Nenhum grupo encontrado na instância selecionada.
+                    Nenhum grupo encontrado nas instâncias conectadas.
                   </p>
                 ) : (
                   <>
-                    <select
-                      data-cy="reports-schedule-group-select"
-                      value={selectedGroupValue}
-                      onChange={(event) =>
+                    <EvolutionGroupCombobox
+                      dataCy="reports-schedule-group-select"
+                      groups={availableGroups}
+                      value={form.groupId}
+                      onChange={(nextValue) =>
                         setForm((current) => ({
                           ...current,
-                          groupId: event.target.value,
+                          groupId: nextValue,
                         }))
                       }
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-[#C1121F]"
-                    >
-                      <option value="">Usar grupo padrão do cliente</option>
-                      {visibleGroups.map((group) => (
-                        <option
-                          key={`${group.instance}:${group.id}`}
-                          value={buildGroupOptionValue(group.instance, group.id)}
-                        >
-                          [{group.instance}] {group.subject} - {group.size} participante(s)
-                        </option>
-                      ))}
-                    </select>
+                      emptyLabel="Usar grupo padrão do cliente"
+                      placeholder="Pesquisar grupo pelo nome..."
+                    />
                     <p className="text-xs text-slate-500">
-                      {activeInstance ? `Instância em uso: ${activeInstance}. ` : ""}
                       {groupsResponse.instances.length} instância(s) detectada(s) nesta integração.
                     </p>
                   </>

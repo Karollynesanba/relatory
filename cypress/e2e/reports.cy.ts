@@ -256,6 +256,7 @@ function mockReportScheduleModal() {
   cy.intercept("GET", "/api/settings/evolution", evolutionGroups).as("loadEvolution")
   cy.intercept("PUT", "/api/clients/client-a/report-schedule", (req) => {
     expect(req.body.frequency).to.eq("ONCE")
+    expect(req.body.groupId).to.eq("evo-backup::group-camila")
     req.reply({
       statusCode: 200,
       body: {
@@ -376,6 +377,11 @@ describe("Reports", () => {
     cy.get('[data-cy="reports-schedule-send-mode"]')
       .should("be.visible")
       .select("Somente mensagem")
+    cy.get('[data-cy="reports-schedule-group-select"]').click()
+    cy.get('input[placeholder="Pesquisar grupo pelo nome..."]')
+      .should("be.focused")
+      .type("comer")
+    cy.contains('[role="option"]', "GreatGo | Operacao Comercial").click()
     cy.get('[data-cy="reports-schedule-confirm"]').should("be.visible").click()
 
     cy.wait("@saveSchedule")

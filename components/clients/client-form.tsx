@@ -1,30 +1,12 @@
 import { useEffect, useState, type ChangeEventHandler, type ReactNode } from "react"
 import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
+import {
+  EvolutionGroupCombobox,
+  normalizeEvolutionGroupId,
+} from "@/components/shared/evolution-group-combobox"
 import type { ClientFormValues } from "@/types/client.types"
 import type { EvolutionSettingsResponse } from "@/types/evolution.types"
-
-function normalizeInstanceKey(value: string | null | undefined) {
-  return (value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-}
-
-function buildGroupOptionValue(instance: string, groupId: string) {
-  return `${instance}::${groupId}`
-}
-
-function normalizeGroupSelection(value: string | null | undefined) {
-  const trimmed = value?.trim() ?? ""
-  const separatorIndex = trimmed.indexOf("::")
-
-  if (separatorIndex < 0) {
-    return trimmed
-  }
-
-  return trimmed.slice(separatorIndex + 2).trim()
-}
 
 type SharedClientFields = Pick<
   ClientFormValues,
@@ -83,26 +65,7 @@ export function ClientForm({
   }, [])
 
   const availableGroups = groupsResponse?.groups ?? []
-  const activeInstance =
-    groupsResponse?.previewInstance ??
-    groupsResponse?.selectedInstance ??
-    null
-  const filteredGroups = activeInstance
-    ? availableGroups.filter(
-        (group) =>
-          normalizeInstanceKey(group.instance) === normalizeInstanceKey(activeInstance)
-      )
-    : availableGroups
-  const visibleGroups = filteredGroups.length > 0 ? filteredGroups : availableGroups
-  const manualGroupValue = normalizeGroupSelection(values.whatsappGroupId)
-  const selectedGroupValue =
-    visibleGroups
-      .map((group) => buildGroupOptionValue(group.instance, group.id))
-      .find((value) => {
-        const rawGroupId = normalizeGroupSelection(value)
-
-        return values.whatsappGroupId === value || manualGroupValue === rawGroupId
-      }) ?? ""
+  const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
@@ -185,33 +148,25 @@ export function ClientForm({
               <p className="text-xs text-red-500">
                 {groupsResponse.detail ?? "Não foi possível consultar os grupos."}
               </p>
-            ) : visibleGroups.length === 0 ? (
+            ) : availableGroups.length === 0 ? (
               <p className="text-xs text-gray-500">
-                Nenhum grupo encontrado na instância selecionada.
+                Nenhum grupo encontrado nas instâncias conectadas.
               </p>
             ) : (
               <>
                 <p className="mb-2 text-xs text-gray-500">
-                  {activeInstance ? `Instância em uso: ${activeInstance}. ` : ""}
                   {groupsResponse.instances.length} instância(s) detectada(s) nesta integração.
                 </p>
-                <select
-                  value={selectedGroupValue}
-                  onChange={(event) =>
-                    onValueChange?.("whatsappGroupId", event.target.value)
+                <EvolutionGroupCombobox
+                  groups={availableGroups}
+                  value={values.whatsappGroupId}
+                  onChange={(nextValue) =>
+                    onValueChange?.("whatsappGroupId", nextValue)
                   }
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C1121F]"
-                >
-                  <option value="">Selecione um grupo para preencher o campo</option>
-                  {visibleGroups.map((group) => (
-                    <option
-                      key={`${group.instance}:${group.id}`}
-                      value={buildGroupOptionValue(group.instance, group.id)}
-                    >
-                      [{group.instance}] {group.subject} - {group.size} participante(s)
-                    </option>
-                  ))}
-                </select>
+                  emptyLabel="Selecione um grupo para preencher o campo"
+                  placeholder="Pesquisar grupo pelo nome..."
+                  dataCy="client-whatsapp-group-select"
+                />
               </>
             )}
           </div>

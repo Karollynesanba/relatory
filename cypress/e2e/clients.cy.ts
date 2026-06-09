@@ -150,5 +150,17 @@ describe("Clientes", () => {
     cy.contains("Opções da integração com a META").should("be.visible")
     cy.get('input[name="profileName"]').should("be.visible")
     cy.get('select[name="brandId"]').should("be.visible")
+
+    cy.get('[data-cy="client-whatsapp-group-select"]').click()
+    cy.get('input[placeholder="Pesquisar grupo pelo nome..."]')
+      .should("be.focused")
+      .type("COMER")
+    cy.contains('[role="option"]', "GreatGo | Comercial").should("be.visible")
+    cy.contains('[role="option"]', "GreatGo | Operacao Central").should("not.exist")
+    cy.contains('[role="option"]', "GreatGo | Comercial").click()
+    cy.get('[data-cy="client-whatsapp-group-select"]').should(
+      "contain",
+      "GreatGo | Comercial"
+    )
   })
 })
