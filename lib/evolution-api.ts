@@ -976,15 +976,17 @@ export async function resolveEvolutionInstanceForDestination(
   preferredInstance?: string | null
 ) {
   const configuredInstance = getRequiredEnv("EVOLUTION_INSTANCE")
-  const normalizedPreferredInstance = normalizeEvolutionInstanceName(preferredInstance)
-
-  if (normalizedPreferredInstance) {
-    return normalizedPreferredInstance
-  }
 
   const normalizedDestination = destination.trim()
 
   if (!normalizedDestination.endsWith("@g.us")) {
+    const normalizedPreferredInstance =
+      normalizeEvolutionInstanceName(preferredInstance)
+
+    if (normalizedPreferredInstance) {
+      return normalizedPreferredInstance
+    }
+
     return configuredInstance
   }
 
@@ -997,6 +999,12 @@ export async function resolveEvolutionInstanceForDestination(
     }
   } catch {
     // Fallback para a instância padrão quando a consulta de grupos falhar.
+  }
+
+  const normalizedPreferredInstance = normalizeEvolutionInstanceName(preferredInstance)
+
+  if (normalizedPreferredInstance) {
+    return normalizedPreferredInstance
   }
 
   return configuredInstance

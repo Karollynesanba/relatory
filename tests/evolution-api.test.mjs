@@ -1,6 +1,7 @@
 import { assert, test } from "./test-helpers.mjs"
 import {
   loadEvolutionCatalog,
+  resolveEvolutionInstanceForDestination,
   sendWhatsAppText,
 } from "@/lib/evolution-api"
 
@@ -291,6 +292,52 @@ test("sendWhatsAppText resolves the instance from the group id", async () => {
     ),
     true
   )
+
+  restoreEnvironment()
+})
+
+test("resolveEvolutionInstanceForDestination prefers the instance bound to the WhatsApp group", async () => {
+  setEvolutionEnv()
+  const requestedInstance = "OutraInstancia"
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          { name: "GreatGo", status: "open" },
+          { name: requestedInstance, status: "open" },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/GreatGo")) {
+      return new Response(
+        JSON.stringify([
+          { id: "999@g.us", subject: "Grupo Correto", size: 22, announce: false },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes(`/group/fetchAllGroups/${encodeURIComponent(requestedInstance)}`)) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const instance = await resolveEvolutionInstanceForDestination(
+    "999@g.us",
+    requestedInstance
+  )
+
+  assert.equal(instance, "GreatGo")
 
   restoreEnvironment()
 })
