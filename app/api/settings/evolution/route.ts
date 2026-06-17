@@ -5,7 +5,10 @@ import {
   loadEvolutionCatalog,
   findEvolutionInstanceMatch,
 } from "@/lib/evolution-api"
-import { normalizeEvolutionInstancePreference } from "@/lib/evolution-preference"
+import {
+  normalizeEvolutionInstancePreference,
+  resolveUserEvolutionInstance,
+} from "@/lib/evolution-preference"
 import { prisma } from "@/lib/prisma"
 import { logError } from "@/lib/safe-logger"
 import type { EvolutionSettingsResponse } from "@/types/evolution.types"
@@ -40,14 +43,16 @@ export async function GET(request: Request) {
     }
 
     const requestUrl = new URL(request.url)
+    const requestedPhone = requestUrl.searchParams.get("phone")?.trim() ?? ""
+    const participantPhone = requestedPhone.replace(/\D/g, "")
     const previewInstance = normalizeEvolutionInstancePreference(
       requestUrl.searchParams.get("previewInstance")
     )
-    const selectedInstance = normalizeEvolutionInstancePreference(
-      user.evolutionInstance ?? null
-    )
+    const selectedInstance =
+      (await resolveUserEvolutionInstance(user)) ??
+      normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
-    const effectiveGroupInstance = previewInstance || null
+    const effectiveGroupInstance = previewInstance || selectedInstance || null
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({
@@ -66,6 +71,7 @@ export async function GET(request: Request) {
     try {
       const catalog = await loadEvolutionCatalog({
         groupInstances: effectiveGroupInstance ? [effectiveGroupInstance] : undefined,
+        participantPhone: participantPhone || null,
       })
       const resolvedPreviewInstance =
         findEvolutionInstanceMatch(previewInstance, catalog.instances)?.name ??
@@ -73,22 +79,37 @@ export async function GET(request: Request) {
       const resolvedSelectedInstance =
         findEvolutionInstanceMatch(selectedInstance, catalog.instances)?.name ??
         selectedInstance
+      const matchedGroupInstance = findEvolutionInstanceMatch(
+        effectiveGroupInstance,
+        catalog.instances
+      )
+      const resolvedGroupInstance =
+        matchedGroupInstance?.name ?? effectiveGroupInstance
+      const groups = resolvedGroupInstance
+        ? catalog.groups.filter((group) => group.instance === resolvedGroupInstance)
+        : []
       const detail =
-        catalog.groups.length > 0
-          ? `${catalog.groups.length} grupo(s) encontrado(s) nas instâncias conectadas.`
-          : "Conexao com a Evolution ativa, mas nenhum grupo foi encontrado."
+        groups.length > 0
+          ? participantPhone
+            ? `${groups.length} grupo(s) encontrado(s) para o número ${requestedPhone}.`
+            : `${groups.length} grupo(s) encontrado(s) na instância ${resolvedGroupInstance}.`
+          : participantPhone
+            ? `Nenhum grupo encontrado para o número ${requestedPhone}.`
+            : `Nenhum grupo encontrado na instância ${resolvedGroupInstance ?? "configurada"}.`
 
       return NextResponse.json<EvolutionSettingsResponse>({
         configured: true,
-        connected: catalog.connected,
+        connected:
+          groups.length > 0 ||
+          isEvolutionInstanceConnected(matchedGroupInstance?.status),
         instance: resolvedSelectedInstance || config.instance || null,
         selectedInstance: resolvedSelectedInstance,
-        previewInstance: resolvedPreviewInstance || null,
+        previewInstance: resolvedPreviewInstance || resolvedGroupInstance || null,
         detail:
           catalog.partialErrors.length > 0
             ? `${detail} Algumas instâncias não puderam ser consultadas nesta atualização.`
             : detail,
-        groups: catalog.groups,
+        groups,
         instances: catalog.instances,
       })
     } catch (error) {

@@ -1,4 +1,11 @@
-import { useEffect, useState, type ChangeEventHandler, type ReactNode } from "react"
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useState,
+  type ChangeEventHandler,
+  type ReactNode,
+} from "react"
 import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
 import {
@@ -22,6 +29,10 @@ type ClientFormProps = {
   onValueChange?: (name: keyof SharedClientFields, value: string) => void
 }
 
+function normalizePhoneDigits(value: string) {
+  return value.replace(/\D/g, "")
+}
+
 export function ClientForm({
   title,
   description,
@@ -35,14 +46,18 @@ export function ClientForm({
   const [groupsResponse, setGroupsResponse] = useState<EvolutionSettingsResponse | null>(
     null
   )
+  const deferredPhone = useDeferredValue(values.phone)
 
-  async function loadEvolutionGroups() {
+  const loadEvolutionGroups = useCallback(async (phoneValue?: string) => {
     setIsLoadingGroups(true)
     setGroupsError("")
 
     try {
+      const phoneDigits = normalizePhoneDigits(phoneValue ?? "")
+      const query =
+        phoneDigits.length >= 10 ? `?phone=${encodeURIComponent(phoneValue ?? "")}` : ""
       const response = await fetchJsonOrThrow<EvolutionSettingsResponse>(
-        "/api/settings/evolution",
+        `/api/settings/evolution${query}`,
         { cache: "no-store" },
         "Não foi possível carregar os grupos da Evolution"
       )
@@ -58,11 +73,11 @@ export function ClientForm({
     } finally {
       setIsLoadingGroups(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    void loadEvolutionGroups()
-  }, [])
+    void loadEvolutionGroups(deferredPhone)
+  }, [deferredPhone, loadEvolutionGroups])
 
   const availableGroups = groupsResponse?.groups ?? []
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
@@ -128,13 +143,19 @@ export function ClientForm({
               </div>
               <button
                 type="button"
-                onClick={() => void loadEvolutionGroups()}
+                onClick={() => void loadEvolutionGroups(values.phone)}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#C1121F] hover:underline"
               >
                 <RefreshCw className={`h-3 w-3 ${isLoadingGroups ? "animate-spin" : ""}`} />
                 Atualizar
               </button>
             </div>
+
+            {normalizePhoneDigits(values.phone).length >= 10 ? (
+              <p className="mb-2 text-xs text-gray-500">
+                Mostrando grupos vinculados ao número {values.phone.trim()}.
+              </p>
+            ) : null}
 
             {isLoadingGroups ? (
               <p className="text-xs text-gray-400">Carregando grupos das instâncias...</p>

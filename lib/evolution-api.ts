@@ -49,6 +49,7 @@ type EvolutionCatalog = {
 
 type EvolutionCatalogOptions = {
   groupInstances?: string[]
+  participantPhone?: string | null
 }
 
 function getRequiredEnv(name: "EVOLUTION_API_URL" | "EVOLUTION_API_KEY" | "EVOLUTION_INSTANCE") {
@@ -671,6 +672,58 @@ function normalizeEvolutionGroupId(group: EvolutionGroupResponseItem) {
       : ""
 }
 
+function normalizePhoneDigits(value: string | null | undefined) {
+  return (value ?? "").replace(/\D/g, "")
+}
+
+function extractParticipantSearchValues(participant: unknown) {
+  if (typeof participant === "string") {
+    return [participant]
+  }
+
+  if (!participant || typeof participant !== "object") {
+    return []
+  }
+
+  const record = participant as Record<string, unknown>
+
+  return [
+    record.id,
+    record.jid,
+    record.remoteJid,
+    record.number,
+    record.phone,
+    record.phoneNumber,
+    record.waId,
+    record.user,
+  ].filter((value): value is string => typeof value === "string")
+}
+
+function groupMatchesParticipantPhone(
+  group: { participants?: unknown[] },
+  phoneDigits: string
+) {
+  if (!phoneDigits) {
+    return true
+  }
+
+  if (!Array.isArray(group.participants) || group.participants.length === 0) {
+    return false
+  }
+
+  return group.participants.some((participant) =>
+    extractParticipantSearchValues(participant).some((value) => {
+      const participantDigits = normalizePhoneDigits(value)
+
+      return (
+        participantDigits === phoneDigits ||
+        participantDigits.endsWith(phoneDigits) ||
+        phoneDigits.endsWith(participantDigits)
+      )
+    })
+  )
+}
+
 function normalizeEvolutionGroupSubject(group: EvolutionGroupResponseItem) {
   return typeof group.subject === "string" && group.subject.trim()
     ? group.subject.trim()
@@ -705,6 +758,7 @@ function mapEvolutionGroupResponseItem(
     size: normalizeEvolutionGroupSize(group),
     announce: Boolean(group.announce),
     instance,
+    participants: Array.isArray(group.participants) ? group.participants : [],
   } satisfies EvolutionGroup
 }
 
@@ -734,6 +788,9 @@ function mergeEvolutionGroups(
           normalizeInstanceKey(existing.instance) === normalizeInstanceKey(group.instance)
             ? existing.instance
             : existing.instance || group.instance,
+        participants: existing.participants?.length
+          ? existing.participants
+          : group.participants ?? [],
       })
     }
   }
@@ -769,13 +826,16 @@ function extractEvolutionGroupItems(data: unknown): EvolutionGroupResponseItem[]
 
 async function fetchEvolutionGroupsForInstance(
   config: EvolutionConfig,
-  instance: string
+  instance: string,
+  includeParticipants = false
 ) {
   const encodedInstance = encodeURIComponent(instance)
   const data = await fetchEvolutionJson<unknown>({
     apiUrl: config.apiUrl,
     apiKey: config.apiKey,
-    path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=false`,
+    path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=${
+      includeParticipants ? "true" : "false"
+    }`,
     timeoutMs: 45_000,
   })
   const groupsData = extractEvolutionGroupItems(data)
@@ -854,11 +914,16 @@ export async function loadEvolutionCatalog(
     instances,
     options?.groupInstances
   )
+  const participantPhoneDigits = normalizePhoneDigits(options?.participantPhone)
   async function fetchGroupsForTargets(instanceTargets: string[]) {
     const groupResults = await Promise.allSettled(
       instanceTargets.map(async (instance) => ({
         instance,
-        groups: await fetchEvolutionGroupsForInstance(config, instance),
+        groups: await fetchEvolutionGroupsForInstance(
+          config,
+          instance,
+          Boolean(participantPhoneDigits)
+        ),
       }))
     )
 
@@ -900,6 +965,12 @@ export async function loadEvolutionCatalog(
         targets.splice(0, targets.length, ...fallbackTargets)
       }
     }
+  }
+
+  if (participantPhoneDigits) {
+    groups = groups.filter((group) =>
+      groupMatchesParticipantPhone(group, participantPhoneDigits)
+    )
   }
 
   const sortedGroups = groups.sort((left, right) => {

@@ -4,6 +4,7 @@ export type EvolutionGroup = {
   size: number
   announce: boolean
   instance: string
+  participants?: unknown[]
 }
 
 export type EvolutionInstance = {

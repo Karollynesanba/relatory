@@ -229,6 +229,67 @@ test("loadEvolutionCatalog falls back to connected instances when the saved inst
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog filters groups by participant phone when requested", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          { name: "GreatGo", status: "open" },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/GreatGo")) {
+      assert.equal(url.includes("getParticipants=true"), true)
+      return new Response(
+        JSON.stringify([
+          {
+            id: "120@g.us",
+            subject: "Grupo Correspondente",
+            size: 10,
+            announce: false,
+            participants: [
+              { id: "5577933008319@s.whatsapp.net" },
+            ],
+          },
+          {
+            id: "999@g.us",
+            subject: "Grupo Diferente",
+            size: 12,
+            announce: false,
+            participants: [
+              { id: "559988776655@s.whatsapp.net" },
+            ],
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({
+    participantPhone: "7793300-8319",
+  })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].id, "120@g.us")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("getParticipants=true")),
+    true
+  )
+
+  restoreEnvironment()
+})
+
 test("sendWhatsAppText resolves the instance from the group id", async () => {
   setEvolutionEnv()
   const requestedUrls = []
