@@ -53,6 +53,7 @@ export async function GET(request: Request) {
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null
+    const shouldSearchAcrossAllInstances = participantPhone.length > 0
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({
@@ -70,7 +71,11 @@ export async function GET(request: Request) {
 
     try {
       const catalog = await loadEvolutionCatalog({
-        groupInstances: effectiveGroupInstance ? [effectiveGroupInstance] : undefined,
+        groupInstances: shouldSearchAcrossAllInstances
+          ? undefined
+          : effectiveGroupInstance
+            ? [effectiveGroupInstance]
+            : undefined,
         participantPhone: participantPhone || null,
       })
       const resolvedPreviewInstance =
@@ -85,9 +90,11 @@ export async function GET(request: Request) {
       )
       const resolvedGroupInstance =
         matchedGroupInstance?.name ?? effectiveGroupInstance
-      const groups = resolvedGroupInstance
-        ? catalog.groups.filter((group) => group.instance === resolvedGroupInstance)
-        : []
+      const groups = shouldSearchAcrossAllInstances
+        ? catalog.groups
+        : resolvedGroupInstance
+          ? catalog.groups.filter((group) => group.instance === resolvedGroupInstance)
+          : []
       const detail =
         groups.length > 0
           ? participantPhone

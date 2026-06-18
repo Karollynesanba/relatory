@@ -241,6 +241,7 @@ test("loadEvolutionCatalog filters groups by participant phone when requested", 
       return new Response(
         JSON.stringify([
           { name: "GreatGo", status: "open" },
+          { name: "Isaque", status: "open" },
         ]),
         { status: 200, headers: { "Content-Type": "application/json" } }
       )
@@ -251,21 +252,30 @@ test("loadEvolutionCatalog filters groups by participant phone when requested", 
       return new Response(
         JSON.stringify([
           {
+            id: "999@g.us",
+            subject: "Grupo Brayton",
+            size: 12,
+            announce: false,
+            participants: [
+              { id: "559988776655@s.whatsapp.net" },
+            ],
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/Isaque")) {
+      assert.equal(url.includes("getParticipants=true"), true)
+      return new Response(
+        JSON.stringify([
+          {
             id: "120@g.us",
             subject: "Grupo Correspondente",
             size: 10,
             announce: false,
             participants: [
               { id: "5577933008319@s.whatsapp.net" },
-            ],
-          },
-          {
-            id: "999@g.us",
-            subject: "Grupo Diferente",
-            size: 12,
-            announce: false,
-            participants: [
-              { id: "559988776655@s.whatsapp.net" },
             ],
           },
         ]),
@@ -282,6 +292,7 @@ test("loadEvolutionCatalog filters groups by participant phone when requested", 
 
   assert.equal(catalog.groups.length, 1)
   assert.equal(catalog.groups[0].id, "120@g.us")
+  assert.equal(catalog.groups[0].instance, "Isaque")
   assert.equal(
     requestedUrls.some((url) => url.includes("getParticipants=true")),
     true
