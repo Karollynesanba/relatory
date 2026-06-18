@@ -95,19 +95,32 @@ export async function GET(request: Request) {
         : resolvedGroupInstance
           ? catalog.groups.filter((group) => group.instance === resolvedGroupInstance)
           : []
-      const detail =
-        groups.length > 0
-          ? participantPhone
-            ? `${groups.length} grupo(s) encontrado(s) para o número ${requestedPhone}.`
-            : `${groups.length} grupo(s) encontrado(s) na instância ${resolvedGroupInstance}.`
-          : participantPhone
-            ? `Nenhum grupo encontrado para o número ${requestedPhone}.`
-            : `Nenhum grupo encontrado na instância ${resolvedGroupInstance ?? "configurada"}.`
+      let finalGroups = groups
+      let detail = ""
+
+      if (participantPhone.length > 0 && finalGroups.length === 0) {
+        const fallbackCatalog = await loadEvolutionCatalog()
+        finalGroups = fallbackCatalog.groups
+        detail = finalGroups.length > 0
+          ? `Nenhum grupo encontrado para o número ${requestedPhone}. Mostrando todos os grupos conectados para seleção manual.`
+          : `Nenhum grupo encontrado para o número ${requestedPhone}.`
+      }
+
+      if (!detail) {
+        detail =
+          finalGroups.length > 0
+            ? participantPhone
+              ? `${finalGroups.length} grupo(s) encontrado(s) para o número ${requestedPhone}.`
+              : `${finalGroups.length} grupo(s) encontrado(s) na instância ${resolvedGroupInstance}.`
+            : participantPhone
+              ? `Nenhum grupo encontrado para o número ${requestedPhone}.`
+              : `Nenhum grupo encontrado na instância ${resolvedGroupInstance ?? "configurada"}.`
+      }
 
       return NextResponse.json<EvolutionSettingsResponse>({
         configured: true,
         connected:
-          groups.length > 0 ||
+          finalGroups.length > 0 ||
           isEvolutionInstanceConnected(matchedGroupInstance?.status),
         instance: resolvedSelectedInstance || config.instance || null,
         selectedInstance: resolvedSelectedInstance,
@@ -116,7 +129,7 @@ export async function GET(request: Request) {
           catalog.partialErrors.length > 0
             ? `${detail} Algumas instâncias não puderam ser consultadas nesta atualização.`
             : detail,
-        groups,
+        groups: finalGroups,
         instances: catalog.instances,
       })
     } catch (error) {
