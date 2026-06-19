@@ -53,7 +53,6 @@ export async function GET(request: Request) {
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null
-    const shouldSearchAcrossAllInstances = participantPhone.length > 0
     const preferredGroupInstances =
       participantPhone.length > 0 && effectiveGroupInstance
         ? [effectiveGroupInstance]
@@ -94,46 +93,40 @@ export async function GET(request: Request) {
       )
       const resolvedGroupInstance =
         matchedGroupInstance?.name ?? effectiveGroupInstance
-      const groups = shouldSearchAcrossAllInstances
-        ? catalog.groups
-        : resolvedGroupInstance
-          ? catalog.groups.filter((group) => group.instance === resolvedGroupInstance)
-          : []
-      let finalGroups = groups
+      const groups = catalog.groups
       let detail = ""
 
-      if (participantPhone.length > 0 && finalGroups.length === 0) {
+      if (participantPhone.length > 0 && groups.length === 0) {
         const fallbackCatalog = await loadEvolutionCatalog()
-        finalGroups = fallbackCatalog.groups
-        detail = finalGroups.length > 0
-          ? `Nenhum grupo encontrado para o número ${requestedPhone}. Mostrando todos os grupos conectados para seleção manual.`
-          : `Nenhum grupo encontrado para o número ${requestedPhone}.`
+        detail =
+          fallbackCatalog.groups.length > 0
+            ? `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}. Mostrando todos os grupos conectados para sele\u00e7\u00e3o manual.`
+            : `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`
       }
 
       if (!detail) {
         detail =
-          finalGroups.length > 0
+          groups.length > 0
             ? participantPhone
-              ? `${finalGroups.length} grupo(s) encontrado(s) para o número ${requestedPhone}.`
-              : `${finalGroups.length} grupo(s) encontrado(s) na instância ${resolvedGroupInstance}.`
+              ? `${groups.length} grupo(s) encontrado(s) para o n\u00famero ${requestedPhone}.`
+              : `${groups.length} grupo(s) encontrado(s) nas inst\u00e2ncias conectadas.`
             : participantPhone
-              ? `Nenhum grupo encontrado para o número ${requestedPhone}.`
-              : `Nenhum grupo encontrado na instância ${resolvedGroupInstance ?? "configurada"}.`
+              ? `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`
+              : `Nenhum grupo encontrado nas inst\u00e2ncias conectadas.`
       }
 
       return NextResponse.json<EvolutionSettingsResponse>({
         configured: true,
         connected:
-          finalGroups.length > 0 ||
-          isEvolutionInstanceConnected(matchedGroupInstance?.status),
+          groups.length > 0 || isEvolutionInstanceConnected(matchedGroupInstance?.status),
         instance: resolvedSelectedInstance || config.instance || null,
         selectedInstance: resolvedSelectedInstance,
         previewInstance: resolvedPreviewInstance || resolvedGroupInstance || null,
         detail:
           catalog.partialErrors.length > 0
-            ? `${detail} Algumas instâncias não puderam ser consultadas nesta atualização.`
+            ? `${detail} Algumas inst\u00e2ncias n\u00e3o puderam ser consultadas nesta atualiza\u00e7\u00e3o.`
             : detail,
-        groups: finalGroups,
+        groups,
         instances: catalog.instances,
       })
     } catch (error) {

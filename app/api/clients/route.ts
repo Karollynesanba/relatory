@@ -58,7 +58,7 @@ function buildClientFilters(searchParams: URLSearchParams) {
 }
 
 async function fetchClients(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   searchParams: URLSearchParams
 ) {
   const filters = buildClientFilters(searchParams)
