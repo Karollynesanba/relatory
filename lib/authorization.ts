@@ -17,6 +17,11 @@ export type AuthenticatedUser = Pick<
 > & {
 }
 
+const DEFAULT_SHARED_CLIENT_EMAILS = [
+  "cl.andrade99@gmail.com",
+  "luiz46340@gmail.com",
+]
+
 function parseSharedReportManagerIds(
   value: string | undefined = process.env.REPORT_SHARED_MANAGER_IDS
 ) {
@@ -29,6 +34,35 @@ function parseSharedReportManagerIds(
 }
 
 const SHARED_REPORT_MANAGER_IDS = parseSharedReportManagerIds()
+
+function parseSharedReportManagerEmails(
+  value: string | undefined = process.env.REPORT_SHARED_MANAGER_EMAILS
+) {
+  return new Set(
+    [
+      ...DEFAULT_SHARED_CLIENT_EMAILS,
+      ...(value ?? "")
+        .split(/[,\n;]+/)
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    ]
+  )
+}
+
+const SHARED_REPORT_MANAGER_EMAILS = parseSharedReportManagerEmails()
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
+
+function hasSharedReportAccess(
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">
+) {
+  return (
+    SHARED_REPORT_MANAGER_IDS.has(user.id) ||
+    SHARED_REPORT_MANAGER_EMAILS.has(normalizeEmail(user.email))
+  )
+}
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   try {
@@ -95,14 +129,14 @@ export function getRoleLabel(role: Role) {
 }
 
 export function canAccessClient(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   managerId: string | null
 ) {
-  return isAdmin(user) || managerId === user.id
+  return isAdmin(user) || hasSharedReportAccess(user) || managerId === user.id
 }
 
 export function canAccessReportClient(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   managerId: string | null
 ) {
   if (canAccessClient(user, managerId)) {
@@ -124,10 +158,10 @@ export function canManageUserProfile(
 }
 
 export function scopeClientWhere(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   where: Prisma.ClientWhereInput = {}
 ): Prisma.ClientWhereInput {
-  if (isAdmin(user)) {
+  if (isAdmin(user) || hasSharedReportAccess(user)) {
     return where
   }
 
@@ -137,10 +171,10 @@ export function scopeClientWhere(
 }
 
 export function scopeReportClientWhere(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   where: Prisma.ReportWhereInput = {}
 ): Prisma.ReportWhereInput {
-  if (isAdmin(user)) {
+  if (isAdmin(user) || hasSharedReportAccess(user)) {
     return where
   }
 
@@ -166,10 +200,10 @@ export function scopeReportClientWhere(
 }
 
 export function scopeSharedReportClientWhere(
-  user: Pick<AuthenticatedUser, "id" | "role">,
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
   where: Prisma.ClientWhereInput = {}
 ): Prisma.ClientWhereInput {
-  if (isAdmin(user)) {
+  if (isAdmin(user) || hasSharedReportAccess(user)) {
     return where
   }
 
