@@ -301,6 +301,62 @@ test("loadEvolutionCatalog filters groups by participant phone when requested", 
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog prefers the selected instance before widening participant searches", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          { name: "Brayton", status: "open" },
+          { name: "GreatGo", status: "open" },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/Brayton")) {
+      assert.equal(url.includes("getParticipants=true"), true)
+      return new Response(
+        JSON.stringify([
+          {
+            id: "120@g.us",
+            subject: "Grupo Brayton",
+            size: 12,
+            announce: false,
+            participants: [{ id: "5577933008319@s.whatsapp.net" }],
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/GreatGo")) {
+      throw new Error(`A busca nao deveria widen para GreatGo: ${url}`)
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({
+    groupInstances: ["Brayton"],
+    participantPhone: "7793300-8319",
+  })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].instance, "Brayton")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("/group/fetchAllGroups/GreatGo")),
+    false
+  )
+
+  restoreEnvironment()
+})
+
 test("sendWhatsAppText resolves the instance from the group id", async () => {
   setEvolutionEnv()
   const requestedUrls = []
