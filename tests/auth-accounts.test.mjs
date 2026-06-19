@@ -95,6 +95,21 @@ test("getBootstrapLoginAccount retorna a conta bootstrap do Kaua", () => {
   })
 })
 
+test("getBootstrapLoginAccount usa a senha configurada do Kaua", () => {
+  assert.deepEqual(
+    getBootstrapLoginAccount("kauaanderson1919@gmail.com", {
+      KAUA_BOOTSTRAP_PASSWORD: "Great2026!",
+    }),
+    {
+      id: "kaua-anderson",
+      name: "Kaua Anderson",
+      email: "kauaanderson1919@gmail.com",
+      role: "ADMIN",
+      password: "Great2026!",
+    }
+  )
+})
+
 test("getBootstrapLoginAccount retorna null para contas nao configuradas", () => {
   assert.equal(getBootstrapLoginAccount("admin@greatgo.com", {}), null)
   assert.equal(getBootstrapLoginAccount("gestor@empresa.com", {}), null)

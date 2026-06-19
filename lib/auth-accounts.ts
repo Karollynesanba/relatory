@@ -22,6 +22,13 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
+function readBootstrapPassword(
+  env: Record<string, string | undefined>,
+  name: string
+) {
+  return readEnvValue(env[name]) || DEFAULT_LOGIN_PASSWORD
+}
+
 function getManagerLoginAccounts(
   env: Record<string, string | undefined> = process.env
 ): AuthLoginAccount[] {
@@ -53,7 +60,7 @@ function getManagerLoginAccounts(
     name: "Kaua Anderson",
     email: "kauaanderson1919@gmail.com",
     role: "ADMIN",
-    password: DEFAULT_LOGIN_PASSWORD,
+    password: readBootstrapPassword(env, "KAUA_BOOTSTRAP_PASSWORD"),
   })
 
   return accounts
