@@ -48,6 +48,14 @@ function getManagerLoginAccounts(
     password: DEFAULT_LOGIN_PASSWORD,
   })
 
+  accounts.push({
+    id: "kaua-anderson",
+    name: "Kaua Anderson",
+    email: "kauaanderson1919@gmail.com",
+    role: "ADMIN",
+    password: DEFAULT_LOGIN_PASSWORD,
+  })
+
   return accounts
 }
 
@@ -103,11 +111,6 @@ export async function ensureBootstrapLoginAccount(
     return null
   }
 
-  if (account.role === "ADMIN") {
-    const { ensureAdminUser } = await import("@/lib/admin-user")
-    return ensureAdminUser()
-  }
-
   const existingUser = await prisma.user.findUnique({
     where: { email: normalizeEmail(account.email) },
     select: {
@@ -128,17 +131,18 @@ export async function ensureBootstrapLoginAccount(
   }
 
   const passwordHash = hashPassword(account.password)
+  const userName = existingUser?.name ?? account.name
 
   return prisma.user.upsert({
     where: { email: normalizeEmail(account.email) },
     update: {
-      name: account.name,
+      name: userName,
       passwordHash,
       role: account.role,
     },
     create: {
       email: normalizeEmail(account.email),
-      name: account.name,
+      name: userName,
       passwordHash,
       role: account.role,
     },

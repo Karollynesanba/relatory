@@ -20,6 +20,12 @@ test("getAuthLoginAccounts inclui a conta bootstrap do Brayton", () => {
         role: "ADMIN",
         password: DEFAULT_LOGIN_PASSWORD,
       },
+      {
+        email: "kauaanderson1919@gmail.com",
+        name: "Kaua Anderson",
+        role: "ADMIN",
+        password: DEFAULT_LOGIN_PASSWORD,
+      },
     ]
   )
 })
@@ -59,6 +65,12 @@ test("getAuthLoginAccounts inclui contas explicitamente configuradas", () => {
         role: "ADMIN",
         password: DEFAULT_LOGIN_PASSWORD,
       },
+      {
+        email: "kauaanderson1919@gmail.com",
+        name: "Kaua Anderson",
+        role: "ADMIN",
+        password: DEFAULT_LOGIN_PASSWORD,
+      },
     ]
   )
 })
@@ -68,6 +80,16 @@ test("getBootstrapLoginAccount retorna a conta bootstrap do Brayton", () => {
     id: "brayton-maycon",
     name: "Brayton Maycon",
     email: "braytonmaycon5@gmail.com",
+    role: "ADMIN",
+    password: DEFAULT_LOGIN_PASSWORD,
+  })
+})
+
+test("getBootstrapLoginAccount retorna a conta bootstrap do Kaua", () => {
+  assert.deepEqual(getBootstrapLoginAccount("kauaanderson1919@gmail.com", {}), {
+    id: "kaua-anderson",
+    name: "Kaua Anderson",
+    email: "kauaanderson1919@gmail.com",
     role: "ADMIN",
     password: DEFAULT_LOGIN_PASSWORD,
   })
