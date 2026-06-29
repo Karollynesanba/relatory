@@ -95,7 +95,6 @@ export async function GET(request: Request) {
     try {
       const catalog = await loadEvolutionCatalog({
         groupInstances: preferredGroupInstances,
-        participantPhone: participantPhone || null,
       })
       const resolvedPreviewInstance =
         findEvolutionInstanceMatch(previewInstance, catalog.instances)?.name ??
@@ -109,18 +108,23 @@ export async function GET(request: Request) {
       )
       const resolvedGroupInstance =
         matchedGroupInstance?.name ?? effectiveGroupInstance
-      let fallbackGroups: EvolutionGroup[] = []
+      let participantCatalogGroups: EvolutionGroup[] = []
       if (participantPhone.length > 0) {
         try {
-          fallbackGroups = (await loadEvolutionCatalog()).groups
+          participantCatalogGroups = (
+            await loadEvolutionCatalog({
+              groupInstances: preferredGroupInstances,
+              participantPhone: participantPhone || null,
+            })
+          ).groups
         } catch (error) {
-          logError("settings.evolution.fallback", error)
+          logError("settings.evolution.participant", error)
         }
       }
 
       const groups =
         participantPhone.length > 0
-          ? mergeEvolutionGroupsById([catalog.groups, fallbackGroups])
+          ? mergeEvolutionGroupsById([participantCatalogGroups, catalog.groups])
           : catalog.groups
       let detail = ""
 
