@@ -191,6 +191,10 @@ function buildClientPayload(client: ClientWithManager): ReportClient {
   }
 }
 
+function isActiveMetaCampaign(campaign: { status?: string | null }) {
+  return campaign.status === "ACTIVE"
+}
+
 function buildMetaTokenOwners(user: ReportUser, client: ClientWithManager) {
   return [
     {
@@ -411,7 +415,9 @@ export async function generateLiveReportPayload(params: {
 
   return {
     client: buildClientPayload(client),
-    campaigns: resolvedPayload.campaigns as ReportPayload["campaigns"],
+    campaigns: (resolvedPayload.campaigns as ReportPayload["campaigns"]).filter(
+      isActiveMetaCampaign
+    ),
     accountInsights: resolvedPayload.accountInsights[0]
       ? (resolvedPayload.accountInsights[0] as ReportPayload["accountInsights"])
       : {},

@@ -12,7 +12,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import { logError } from "@/lib/safe-logger"
 import type { EvolutionSettingsResponse } from "@/types/evolution.types"
-import type { EvolutionInstance } from "@/types/evolution.types"
+import type { EvolutionGroup, EvolutionInstance } from "@/types/evolution.types"
 
 const EVOLUTION_CONNECTED_STATUSES = new Set([
   "open",
@@ -32,6 +32,22 @@ function isEvolutionInstanceConnected(status: string | null | undefined) {
   }
 
   return EVOLUTION_CONNECTED_STATUSES.has(status)
+}
+
+function mergeEvolutionGroupsById(
+  groupsList: EvolutionGroup[][]
+): EvolutionGroup[] {
+  const merged = new Map<string, EvolutionGroup>()
+
+  for (const groups of groupsList) {
+    for (const group of groups) {
+      if (!merged.has(group.id)) {
+        merged.set(group.id, group)
+      }
+    }
+  }
+
+  return [...merged.values()]
 }
 
 export async function GET(request: Request) {
@@ -93,22 +109,30 @@ export async function GET(request: Request) {
       )
       const resolvedGroupInstance =
         matchedGroupInstance?.name ?? effectiveGroupInstance
-      const groups = catalog.groups
+      let fallbackGroups: EvolutionGroup[] = []
+      if (participantPhone.length > 0) {
+        try {
+          fallbackGroups = (await loadEvolutionCatalog()).groups
+        } catch (error) {
+          logError("settings.evolution.fallback", error)
+        }
+      }
+
+      const groups =
+        participantPhone.length > 0
+          ? mergeEvolutionGroupsById([catalog.groups, fallbackGroups])
+          : catalog.groups
       let detail = ""
 
       if (participantPhone.length > 0 && groups.length === 0) {
-        const fallbackCatalog = await loadEvolutionCatalog()
-        detail =
-          fallbackCatalog.groups.length > 0
-            ? `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}. Mostrando todos os grupos conectados para sele\u00e7\u00e3o manual.`
-            : `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`
+        detail = `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`
       }
 
       if (!detail) {
         detail =
           groups.length > 0
             ? participantPhone
-              ? `${groups.length} grupo(s) encontrado(s) para o n\u00famero ${requestedPhone}.`
+              ? `${groups.length} grupo(s) disponível(is), incluindo os vinculados ao número ${requestedPhone}.`
               : `${groups.length} grupo(s) encontrado(s) nas inst\u00e2ncias conectadas.`
             : participantPhone
               ? `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`

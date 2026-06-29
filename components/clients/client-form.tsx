@@ -153,7 +153,7 @@ export function ClientForm({
 
             {normalizePhoneDigits(values.phone).length >= 10 ? (
               <p className="mb-2 text-xs text-gray-500">
-                Mostrando grupos vinculados ao número {values.phone.trim()}.
+                Mostrando os grupos da Evolution para seleção manual deste cliente.
               </p>
             ) : null}
 
