@@ -468,20 +468,22 @@ function buildMetricCards(payload: StoredReportPayload) {
 }
 
 function buildCampaignRows(payload: StoredReportPayload, objectiveLabel: string) {
-  return payload.campaigns.map((campaign) => {
-    const insight = campaign.insights?.data?.[0] ?? {}
-    const metric = resolveObjectiveMetric(insight, payload.filters.objective)
+  return payload.campaigns
+    .filter((campaign) => campaign.status === "ACTIVE")
+    .map((campaign) => {
+      const insight = campaign.insights?.data?.[0] ?? {}
+      const metric = resolveObjectiveMetric(insight, payload.filters.objective)
 
-    return {
-      name: campaign.name,
-      objective: campaign.objective ?? objectiveLabel,
-      status: campaign.status === "ACTIVE" ? "Ativa" : campaign.status,
-      metricValue: formatInteger(metric.value),
-      clicks: formatInteger(parseReportNumber(insight.clicks)),
-      impressions: formatInteger(parseReportNumber(insight.impressions)),
-      spend: formatCurrency(parseReportNumber(insight.spend)),
-    } satisfies CampaignRow
-  })
+      return {
+        name: campaign.name,
+        objective: campaign.objective ?? objectiveLabel,
+        status: campaign.status === "ACTIVE" ? "Ativa" : campaign.status,
+        metricValue: formatInteger(metric.value),
+        clicks: formatInteger(parseReportNumber(insight.clicks)),
+        impressions: formatInteger(parseReportNumber(insight.impressions)),
+        spend: formatCurrency(parseReportNumber(insight.spend)),
+      } satisfies CampaignRow
+    })
 }
 
 export function buildStandardReportPdfBuffer(params: {

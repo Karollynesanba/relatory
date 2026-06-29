@@ -26,6 +26,10 @@ import {
 import { logError } from "@/lib/safe-logger"
 import type { ReportSendMode, SavedReportResponse } from "@/types/report.types"
 
+function isActiveCampaign(campaign: { status?: string | null }) {
+  return campaign.status === "ACTIVE"
+}
+
 export default function ReportPreviewPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
@@ -63,7 +67,9 @@ export default function ReportPreviewPage() {
         onUpdate: (report) => {
           setSavedReport(report)
           setSelectedCampaignIds(
-            report.payload?.campaigns.map((campaign) => campaign.id) ?? []
+            report.payload?.campaigns
+              .filter(isActiveCampaign)
+              .map((campaign) => campaign.id) ?? []
           )
           if (report.payload) {
             setInsightsEnabled(report.payload.presentation?.insightsEnabled ?? true)

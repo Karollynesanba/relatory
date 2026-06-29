@@ -855,8 +855,9 @@ export function ReportPreview({
   const objectiveMetric = resolveObjectiveMetric(accountInsights, objective)
   const messageMetric = resolveMessageMetric(accountInsights)
 
-  const selectedCampaigns = reportData.campaigns.filter((campaign) =>
-    selectedCampaignIds.includes(campaign.id)
+  const selectedCampaigns = reportData.campaigns.filter(
+    (campaign) =>
+      campaign.status === "ACTIVE" && selectedCampaignIds.includes(campaign.id)
   )
 
   const chartData = (reportData.dailyInsights ?? []).map((day) => ({

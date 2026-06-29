@@ -101,6 +101,10 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+function isActiveCampaign(campaign: { status?: string | null }) {
+  return campaign.status === "ACTIVE"
+}
+
 export default function ReportsPage() {
   const reportPollSequenceRef = useRef(0)
   const autoLoadedReportKeyRef = useRef("")
@@ -201,7 +205,9 @@ export default function ReportsPage() {
 
     setCurrentReportId(savedReport.id)
     setReportData(payload)
-    setSelectedCampaigns(payload.campaigns.map((campaign) => campaign.id))
+    setSelectedCampaigns(
+      payload.campaigns.filter(isActiveCampaign).map((campaign) => campaign.id)
+    )
     const previewMessage = buildReportSendPreview({
       reportId: savedReport.id,
       payload: savedReport.payload,

@@ -39,13 +39,15 @@ export function CampaignSelector({
   onToggleCampaign,
   className,
 }: CampaignSelectorProps) {
-  if (campaigns.length === 0) {
+  const activeCampaigns = campaigns.filter((campaign) => campaign.status === "ACTIVE")
+
+  if (activeCampaigns.length === 0) {
     return null
   }
 
   return (
     <div className={cn("space-y-2", className)}>
-      {campaigns.map((campaign) => (
+      {activeCampaigns.map((campaign) => (
         <label
           key={campaign.id}
           className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition hover:border-slate-300 hover:bg-slate-100"
