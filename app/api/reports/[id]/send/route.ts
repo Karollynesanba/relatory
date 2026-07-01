@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { canAccessClient, getCurrentUser } from "@/lib/authorization"
-import { normalizeEvolutionInstancePreference } from "@/lib/evolution-preference"
+import { resolveUserEvolutionInstance } from "@/lib/evolution-preference"
 import { parseStoredReportPayload } from "@/lib/report-domain"
 import { sendPersistedReportNow } from "@/lib/report-delivery"
 import { prisma } from "@/lib/prisma"
@@ -83,7 +83,7 @@ export async function POST(
     }
 
     const targetGroupId = body.groupId?.trim() || report.client.whatsappGroupId
-    const evolutionInstance = normalizeEvolutionInstancePreference(user.evolutionInstance)
+    const evolutionInstance = await resolveUserEvolutionInstance(user)
 
     if (!targetGroupId) {
       return NextResponse.json(

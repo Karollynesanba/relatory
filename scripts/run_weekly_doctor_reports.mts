@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { parseArgs } from "node:util"
 import type { prisma as PrismaClientInstance } from "@/lib/prisma"
 import { config as loadDotenv } from "dotenv"
+
+process.env.PRISMA_CLIENT_ENGINE_TYPE ||= "binary"
 import {
   buildAutomationReferenceWeekDate,
   buildAutomationReferenceWeekLabel,

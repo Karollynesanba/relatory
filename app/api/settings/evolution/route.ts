@@ -70,13 +70,11 @@ export async function GET(request: Request) {
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null
     const preferredGroupInstances =
-      participantPhone.length > 0 && effectiveGroupInstance
-        ? [effectiveGroupInstance]
-        : participantPhone.length > 0
-          ? undefined
-          : effectiveGroupInstance
-            ? [effectiveGroupInstance]
-            : undefined
+      participantPhone.length > 0
+        ? undefined
+        : effectiveGroupInstance
+          ? [effectiveGroupInstance]
+          : undefined
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({

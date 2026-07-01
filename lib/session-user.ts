@@ -72,7 +72,7 @@ export async function findUserForSession<T extends Prisma.UserSelect>(params: {
   }
 
   try {
-    return prisma.user.findUnique({
+    return await prisma.user.findUnique({
       where: { id: sessionUserId },
       select: params.select,
     })

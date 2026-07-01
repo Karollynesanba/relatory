@@ -847,9 +847,11 @@ async function fetchEvolutionGroupsForInstance(
   const mergedGroups = mergeEvolutionGroups([
     {
       instance,
-      groups: groupsData
-        .map((group) => mapEvolutionGroupResponseItem(group, instance))
-        .filter((group): group is EvolutionGroup => Boolean(group)),
+      groups: groupsData.flatMap((group) => {
+        const mappedGroup = mapEvolutionGroupResponseItem(group, instance)
+
+        return mappedGroup ? [mappedGroup] : []
+      }),
     },
   ])
 
@@ -948,6 +950,33 @@ export async function loadEvolutionCatalog(
   }
 
   let groups = await fetchGroupsForTargets(targets)
+
+  if (!participantPhoneDigits) {
+    const missingTargets = instances
+      .map((instance) => instance.name)
+      .filter(
+        (instance) =>
+          !targets.some(
+            (target) =>
+              normalizeEvolutionInstanceKey(target) ===
+              normalizeEvolutionInstanceKey(instance)
+          )
+      )
+
+    if (missingTargets.length > 0) {
+      const additionalGroups = await fetchGroupsForTargets(missingTargets)
+
+      if (additionalGroups.length > 0) {
+        groups = mergeEvolutionGroups([
+          {
+            instance: "",
+            groups: [...groups, ...additionalGroups],
+          },
+        ])
+        targets.splice(0, targets.length, ...dedupeStrings([...targets, ...missingTargets]))
+      }
+    }
+  }
 
   if (
     groups.length === 0 &&

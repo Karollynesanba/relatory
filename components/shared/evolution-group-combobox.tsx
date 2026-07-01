@@ -70,10 +70,16 @@ export function EvolutionGroupCombobox({
       groups.map((group) => ({
         group,
         searchValue: normalizeSearchValue(
-          `${group.subject} ${group.instance} ${group.id}`
+          `${group.subject} ${group.instance} ${group.id} ${buildEvolutionGroupValue(group)}`
         ),
+        exactMatch:
+          normalizeSearchValue(group.id) === normalizeSearchValue(deferredSearch) ||
+          normalizeSearchValue(buildEvolutionGroupValue(group)) ===
+            normalizeSearchValue(deferredSearch)
+            ? 0
+            : 1,
       })),
-    [groups]
+    [deferredSearch, groups]
   )
 
   const selectedGroup = useMemo(
@@ -95,6 +101,22 @@ export function EvolutionGroupCombobox({
 
     return searchableGroups
       .filter((entry) => entry.searchValue.includes(normalizedSearch))
+      .sort((left, right) => {
+        if (left.exactMatch !== right.exactMatch) {
+          return left.exactMatch - right.exactMatch
+        }
+
+        const subjectComparison = left.group.subject.localeCompare(
+          right.group.subject,
+          "pt-BR"
+        )
+
+        if (subjectComparison !== 0) {
+          return subjectComparison
+        }
+
+        return left.group.instance.localeCompare(right.group.instance, "pt-BR")
+      })
       .map((entry) => entry.group)
   }, [deferredSearch, groups, searchableGroups])
 
@@ -334,6 +356,9 @@ export function EvolutionGroupCombobox({
                     </span>
                     <span className="block truncate text-xs text-gray-400">
                       {group.instance} · {group.size} participante(s)
+                    </span>
+                    <span className="block truncate text-[11px] text-gray-400">
+                      {group.id}
                     </span>
                   </span>
                   {isSelected ? (

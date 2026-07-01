@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { after, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { getCurrentUser, isAdmin } from "@/lib/authorization"
 import { listEvolutionGroups } from "@/lib/evolution-api"
@@ -11,16 +11,36 @@ import {
 import { runDueReportScheduleSweep } from "@/lib/report-schedule-fallback"
 import { logError } from "@/lib/safe-logger"
 
+const HISTORY_GROUP_LOOKUP_TIMEOUT_MS = 5_000
+const HISTORY_REPORT_LIMIT = 500
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallback: T
+) {
+  return await Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs)
+    }),
+  ])
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
     if (!user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      return NextResponse.json({ error: "NÃ£o autorizado" }, { status: 401 })
     }
 
-    await runDueReportScheduleSweep({
-      source: "history-route",
-      limit: 10,
+    after(() => {
+      void runDueReportScheduleSweep({
+        source: "history-route",
+        limit: 10,
+      }).catch((error) => {
+        logError("history.sweep", error)
+      })
     })
 
     const { searchParams } = new URL(request.url)
@@ -61,9 +81,10 @@ export async function GET(request: Request) {
       clientWhere.id = clientId
     }
 
-    const reports = await prisma.report.findMany({
+    const reportsPromise = prisma.report.findMany({
       where,
       orderBy: { generatedAt: "desc" },
+      take: HISTORY_REPORT_LIMIT,
       include: {
         client: {
           select: {
@@ -83,7 +104,7 @@ export async function GET(request: Request) {
       },
     })
 
-    const clientsWithSchedules = await prisma.client.findMany({
+    const clientsWithSchedulesPromise = prisma.client.findMany({
       where: clientWhere,
       select: {
         id: true,
@@ -103,18 +124,26 @@ export async function GET(request: Request) {
       },
     })
 
-    let groupNameById = new Map<string, string>()
-
-    try {
-      const groups = await listEvolutionGroups()
-      groupNameById = new Map(
-        groups
-          .filter((group) => Boolean(group.id))
-          .map((group) => [group.id, group.subject])
-      )
-    } catch (error) {
+    const groupsPromise = withTimeout(
+      listEvolutionGroups(),
+      HISTORY_GROUP_LOOKUP_TIMEOUT_MS,
+      []
+    ).catch((error) => {
       logError("history.groups", error)
-    }
+      return []
+    })
+
+    const [reports, clientsWithSchedules, groups] = await Promise.all([
+      reportsPromise,
+      clientsWithSchedulesPromise,
+      groupsPromise,
+    ])
+
+    const groupNameById = new Map(
+      groups
+        .filter((group) => Boolean(group.id))
+        .map((group) => [group.id, group.subject])
+    )
 
     const historyRows = [
       ...reports.map((report) => ({
@@ -158,7 +187,9 @@ export async function GET(request: Request) {
       .sort((left, right) => right.sortAt.getTime() - left.sortAt.getTime())
       .map(({ row }) => ({
         ...row,
-        groupName: row.groupId ? groupNameById.get(row.groupId) ?? row.groupName : row.groupName,
+        groupName: row.groupId
+          ? groupNameById.get(row.groupId) ?? row.groupName
+          : row.groupName,
       }))
 
     return NextResponse.json(historyRows)
@@ -166,9 +197,9 @@ export async function GET(request: Request) {
     logError("history.get", error)
     return NextResponse.json(
       {
-        error: "Falha ao carregar histórico",
+        error: "Falha ao carregar histÃ³rico",
         detail:
-          "Não foi possível recuperar o histórico de relatórios neste momento.",
+          "NÃ£o foi possÃ­vel recuperar o histÃ³rico de relatÃ³rios neste momento.",
       },
       { status: 500 }
     )

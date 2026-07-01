@@ -25,6 +25,7 @@ import {
   type MetaTokenPreset,
 } from "@/lib/meta-token"
 import { getMetaAppAccessToken } from "@/lib/meta-api"
+import { getEvolutionInstanceForMetaPreset } from "@/lib/evolution-preference"
 
 type AuthenticatedContext = {
   session: Awaited<ReturnType<typeof getServerSession>>
@@ -314,6 +315,16 @@ export async function POST(request: Request) {
         token: presetToken,
         expiresAt: null,
       })
+
+      const evolutionInstance = getEvolutionInstanceForMetaPreset(preset)
+      if (user?.id && evolutionInstance) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            evolutionInstance,
+          },
+        })
+      }
 
       try {
         const inspectedPreset = await inspectSelectedPresetToken(preset)

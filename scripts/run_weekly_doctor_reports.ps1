@@ -50,9 +50,10 @@ New-Item -ItemType Directory -Path $logsDirectory -Force | Out-Null
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $stdoutLog = Join-Path $logsDirectory "weekly-report-task-$timestamp.log"
 $stderrLog = Join-Path $logsDirectory "weekly-report-task-$timestamp.err.log"
+$env:PRISMA_CLIENT_ENGINE_TYPE = "binary"
+$env:NODE_NO_WARNINGS = "1"
 
 $argumentList = @(
-  "--experimental-strip-types",
   "--loader",
   $aliasLoaderArgument,
   $runnerScriptArgument,
@@ -66,18 +67,37 @@ Write-Host "Env file: $resolvedEnvFile"
 Write-Host "Stdout log: $stdoutLog"
 Write-Host "Stderr log: $stderrLog"
 
-$process = Start-Process `
-  -FilePath $NodePath `
-  -ArgumentList $argumentList `
-  -WorkingDirectory $resolvedRepoRoot `
-  -RedirectStandardOutput $stdoutLog `
-  -RedirectStandardError $stderrLog `
-  -NoNewWindow `
-  -PassThru `
-  -Wait
+$previousLocation = Get-Location
+Set-Location -LiteralPath $resolvedRepoRoot
 
-if ($process.ExitCode -ne 0) {
+try {
+  function Quote-CmdArgument {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    return '"' + ($Value -replace '"', '\"') + '"'
+  }
+
+  $quotedArguments = $argumentList | ForEach-Object { Quote-CmdArgument -Value $_ }
+  $nodeCommand =
+    (Quote-CmdArgument -Value $NodePath) + ' ' +
+    ($quotedArguments -join ' ') +
+    ' 1> ' + (Quote-CmdArgument -Value $stdoutLog) +
+    ' 2> ' + (Quote-CmdArgument -Value $stderrLog)
+
+  $command = @(
+    'set "PRISMA_CLIENT_ENGINE_TYPE=binary"'
+    '&& set "NODE_NO_WARNINGS=1"'
+    '&& ' + $nodeCommand
+  ) -join ' '
+
+  & cmd.exe /c $command
+  $exitCode = $LASTEXITCODE
+} finally {
+  Set-Location -LiteralPath $previousLocation
+}
+
+if ($exitCode -ne 0) {
   Write-Error "A automacao terminou com falha. Veja $stderrLog e $stdoutLog"
 }
 
-exit $process.ExitCode
+exit $exitCode

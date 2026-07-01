@@ -158,9 +158,10 @@ Set-Location -LiteralPath $resolvedRepoRoot
 $stdoutLog = Join-Path $resolvedRepoRoot ".codex-report-daemon.out.log"
 $stderrLog = Join-Path $resolvedRepoRoot ".codex-report-daemon.err.log"
 $nodeExecutable = Resolve-NodeExecutable -PreferredPath $NodePath
+$env:PRISMA_CLIENT_ENGINE_TYPE = "binary"
+$env:NODE_NO_WARNINGS = "1"
 $null = Repair-LocalPostgresService -ServiceName "postgresql-x64-18"
 $argumentList = @(
-  "--experimental-strip-types",
   "--loader",
   "./tests/alias-loader.mjs",
   "./scripts/run_weekly_doctor_reports_daemon.mts"

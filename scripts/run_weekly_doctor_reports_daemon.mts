@@ -9,6 +9,8 @@ import { processPendingReportBatch } from "@/lib/report-processing"
 import { processDueReportSchedules } from "@/lib/report-schedule"
 import { touchReportWorkerHeartbeat } from "@/lib/report-worker-health"
 
+process.env.PRISMA_CLIENT_ENGINE_TYPE ||= "binary"
+
 type WeeklyDoctorReportsCliArgs = {
   dryRun: boolean
   since?: string

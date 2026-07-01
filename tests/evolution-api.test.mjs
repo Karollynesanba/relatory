@@ -229,6 +229,61 @@ test("loadEvolutionCatalog falls back to connected instances when the saved inst
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog also inspects disconnected instances when there is no participant filter", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          { name: "GreatGo", status: "open" },
+          { name: "ART DENTAL", status: "closed" },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/GreatGo")) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    if (url.includes("/group/fetchAllGroups/ART%20DENTAL")) {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "999@g.us",
+            subject: "ART DENTAL",
+            size: 14,
+            announce: false,
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog()
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].subject, "ART DENTAL")
+  assert.equal(catalog.groups[0].instance, "ART DENTAL")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("/group/fetchAllGroups/ART%20DENTAL")),
+    true
+  )
+
+  restoreEnvironment()
+})
+
 test("loadEvolutionCatalog filters groups by participant phone when requested", async () => {
   setEvolutionEnv()
   const requestedUrls = []

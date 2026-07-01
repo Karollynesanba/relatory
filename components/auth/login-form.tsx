@@ -93,6 +93,15 @@ export default function LoginForm({ initialCallbackUrl }: LoginFormProps) {
         throw new Error("Não houve resposta da autenticação.")
       }
 
+      if (!result.ok || result.status !== 200) {
+        if (result.error === "AccessDenied") {
+          setError("Seu acesso foi recusado. Verifique suas permissões.")
+        } else {
+          setError("E-mail ou senha inválidos.")
+        }
+        return
+      }
+
       if (result.error) {
         setError(getLoginErrorMessage(result.error))
         return
@@ -149,11 +158,17 @@ export default function LoginForm({ initialCallbackUrl }: LoginFormProps) {
               />
             </div>
 
-            <h1 className="mt-2 text-[42px] font-semibold tracking-[-0.06em] text-[color:var(--color-app-text)] sm:text-[48px]">
+            <p className="mt-2 text-sm font-semibold uppercase tracking-[0.28em] text-[color:var(--color-app-text-faint)]">
               GreatGo
+            </p>
+            <h1 className="mt-2 text-[42px] font-semibold tracking-[-0.06em] text-[color:var(--color-app-text)] sm:text-[48px]">
+              Um painel mais claro para acompanhar clientes, mídia e relatórios.
             </h1>
+            <h2 className="mt-3 text-[18px] font-medium text-[color:var(--color-app-text-soft)]">
+              Entrar na plataforma
+            </h2>
             <p className="mt-2 text-[18px] font-medium text-[color:var(--color-app-text-soft)]">
-              Operação de relatórios para META Ads
+              Use sua conta cadastrada para acessar o painel operacional, clientes e integrações.
             </p>
 
             <div className="mt-5 rounded-full border border-[color:var(--color-app-border)] bg-[var(--color-app-surface-muted)] px-5 py-2 text-[18px] font-medium text-[#df2531] backdrop-blur-xl">

@@ -2,6 +2,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useMemo,
   useState,
   type ChangeEventHandler,
   type ReactNode,
@@ -10,6 +11,7 @@ import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
 import {
   EvolutionGroupCombobox,
+  buildEvolutionGroupValue,
   normalizeEvolutionGroupId,
 } from "@/components/shared/evolution-group-combobox"
 import type { ClientFormValues } from "@/types/client.types"
@@ -81,6 +83,31 @@ export function ClientForm({
 
   const availableGroups = groupsResponse?.groups ?? []
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
+  const matchedGroup = useMemo(() => {
+    const normalizedManualValue = manualGroupValue.trim().toLowerCase()
+
+    if (!normalizedManualValue || availableGroups.length === 0) {
+      return null
+    }
+
+    return (
+      availableGroups.find((group) => {
+        const groupId = group.id.trim().toLowerCase()
+        const groupValue = buildEvolutionGroupValue(group).trim().toLowerCase()
+        const groupSubject = group.subject.trim().toLowerCase()
+        const groupInstance = group.instance.trim().toLowerCase()
+
+        return (
+          groupId === normalizedManualValue ||
+          groupValue === normalizedManualValue ||
+          groupSubject.includes(normalizedManualValue) ||
+          groupInstance.includes(normalizedManualValue) ||
+          groupId.includes(normalizedManualValue) ||
+          groupValue.includes(normalizedManualValue)
+        )
+      }) ?? null
+    )
+  }, [availableGroups, manualGroupValue])
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
@@ -203,6 +230,28 @@ export function ClientForm({
           <p className="mt-2 text-xs text-gray-400">
             Aceita IDs de grupo antigos e novos da Evolution, como `120363407411420148@g.us`.
           </p>
+          {manualGroupValue && matchedGroup ? (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                Grupo encontrado
+              </p>
+              <p className="mt-1 text-sm font-semibold text-emerald-950">
+                {matchedGroup.subject}
+              </p>
+              <p className="mt-1 text-xs text-emerald-700">
+                {matchedGroup.instance} · {matchedGroup.id}
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  onValueChange?.("whatsappGroupId", matchedGroup.id)
+                }
+                className="mt-3 inline-flex items-center rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+              >
+                Usar este grupo
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div>
