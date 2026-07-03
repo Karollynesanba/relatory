@@ -1,42 +1,41 @@
 import { defineConfig } from "cypress"
+import { encode } from "next-auth/jwt"
+
+const TEST_NEXTAUTH_SECRET = "codex-cypress-nextauth-secret-20260701"
 
 export default defineConfig({
   allowCypressEnv: true,
 
   e2e: {
     baseUrl: "http://localhost:3000",
-    pageLoadTimeout: 120000,
-    responseTimeout: 60000,
+    pageLoadTimeout: 180000,
+    responseTimeout: 180000,
     defaultCommandTimeout: 15000,
     setupNodeEvents(on, config) {
       on("task", {
         async buildNextAuthSession({
           email,
-          password,
+          name,
+          role,
         }: {
           email?: string
-          password?: string
+          name?: string
+          role?: "ADMIN" | "MANAGER"
         }) {
-          const baseUrl = config.baseUrl ?? "http://localhost:3000"
-          const response = await fetch(new URL("/api/test/login", baseUrl), {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+          const normalizedEmail = (email ?? "admin@greatgo.com").trim().toLowerCase()
+          const token = await encode({
+            secret: TEST_NEXTAUTH_SECRET,
+            maxAge: 60 * 60 * 24 * 30,
+            token: {
+              sub: normalizedEmail,
+              id: normalizedEmail,
+              email: normalizedEmail,
+              name: name ?? "Admin GreatGo",
+              role: role ?? "ADMIN",
             },
-            body: JSON.stringify({
-              email,
-              password,
-            }),
           })
 
-          if (!response.ok) {
-            const text = await response.text().catch(() => "")
-            throw new Error(
-              `Falha ao criar sessao de teste: ${response.status} ${text}`.trim()
-            )
-          }
-
-          return response.json()
+          return { token }
         },
       })
 

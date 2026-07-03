@@ -11,6 +11,10 @@ import {
 } from "@/lib/meta-token-status"
 import { prisma } from "@/lib/prisma"
 import {
+  aggregateCampaignInsights,
+  filterReportCampaignsByClientCampaigns,
+} from "@/lib/report-campaign-filters"
+import {
   buildReferenceWeekDate,
   buildStoredReportPayload,
   serializeStoredReportPayload,
@@ -96,7 +100,6 @@ export async function generateLiveReportPayload(params: {
 
   const [
     campaigns,
-    accountInsights,
     dailyInsights,
     topAds,
     genderBreakdown,
@@ -108,12 +111,6 @@ export async function generateLiveReportPayload(params: {
       limit: 50,
       timeRange,
       filtering,
-    }),
-    getMetaInsights({
-      objectId: client.adAccountId,
-      token,
-      fields: "spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values",
-      timeRange,
     }),
     getMetaInsights({
       objectId: client.adAccountId,
@@ -140,12 +137,25 @@ export async function generateLiveReportPayload(params: {
     }),
   ])
 
+  const activeCampaigns = await prisma.clientCampaign.findMany({
+    where: {
+      clientId: client.id,
+      isActive: true,
+    },
+    select: {
+      campaignIdMeta: true,
+      isActive: true,
+    },
+  })
+  const resolvedCampaigns = filterReportCampaignsByClientCampaigns(
+    campaigns as ReportPayload["campaigns"],
+    activeCampaigns
+  )
+
   return {
     client: buildClientPayload(client),
-    campaigns: campaigns as ReportPayload["campaigns"],
-    accountInsights: accountInsights[0]
-      ? (accountInsights[0] as ReportPayload["accountInsights"])
-      : {},
+    campaigns: resolvedCampaigns,
+    accountInsights: aggregateCampaignInsights(resolvedCampaigns),
     dailyInsights: dailyInsights as ReportPayload["dailyInsights"],
     topAds: topAds
       .slice()

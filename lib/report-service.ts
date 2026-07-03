@@ -13,6 +13,10 @@ import {
 import { getMetaAccessTokenFromEnv } from "@/lib/meta-token"
 import { prisma } from "@/lib/prisma"
 import {
+  aggregateCampaignInsights,
+  filterReportCampaignsByClientCampaigns,
+} from "@/lib/report-campaign-filters"
+import {
   buildPendingReportJobPayload,
   buildReferenceWeekDate,
   buildStoredReportPayload,
@@ -307,7 +311,6 @@ async function buildLiveReportPayloadWithToken(params: {
 
   const [
     campaigns,
-    accountInsights,
     dailyInsights,
     topAds,
     genderBreakdown,
@@ -319,12 +322,6 @@ async function buildLiveReportPayloadWithToken(params: {
       limit: 50,
       timeRange,
       filtering,
-    }),
-    getMetaInsights({
-      objectId: client.adAccountId!,
-      token,
-      fields: "spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values",
-      timeRange,
     }),
     getMetaInsights({
       objectId: client.adAccountId!,
@@ -351,9 +348,25 @@ async function buildLiveReportPayloadWithToken(params: {
     }),
   ])
 
+  const activeCampaigns = await prisma.clientCampaign.findMany({
+    where: {
+      clientId: client.id,
+      isActive: true,
+    },
+    select: {
+      campaignIdMeta: true,
+      isActive: true,
+    },
+  })
+
+  const resolvedCampaigns = filterReportCampaignsByClientCampaigns(
+    campaigns as ReportPayload["campaigns"],
+    activeCampaigns
+  )
+
   return {
-    campaigns,
-    accountInsights,
+    campaigns: resolvedCampaigns,
+    accountInsights: aggregateCampaignInsights(resolvedCampaigns),
     dailyInsights,
     topAds,
     genderBreakdown,
@@ -418,9 +431,7 @@ export async function generateLiveReportPayload(params: {
     campaigns: (resolvedPayload.campaigns as ReportPayload["campaigns"]).filter(
       isActiveMetaCampaign
     ),
-    accountInsights: resolvedPayload.accountInsights[0]
-      ? (resolvedPayload.accountInsights[0] as ReportPayload["accountInsights"])
-      : {},
+    accountInsights: resolvedPayload.accountInsights,
     dailyInsights: resolvedPayload.dailyInsights as ReportPayload["dailyInsights"],
     topAds: resolvedPayload.topAds
       .slice()

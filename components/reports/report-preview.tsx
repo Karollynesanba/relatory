@@ -27,6 +27,7 @@ import {
   resolveMessageMetric,
   resolveObjectiveMetric,
 } from "@/lib/report-metrics"
+import { aggregateCampaignInsights } from "@/lib/report-campaign-filters"
 import { cn } from "@/lib/utils"
 import type {
   ReportClient,
@@ -844,7 +845,14 @@ export function ReportPreview({
   const resolvedExecutiveSummary = executiveSummary ?? presentation?.executiveSummary
   const resolvedClosingNotes = closingNotes ?? presentation?.closingNotes
   const shouldShowInsights = visibleSections.insights && insightsEnabled
-  const accountInsights = reportData.accountInsights ?? {}
+  const selectedCampaigns = reportData.campaigns.filter(
+    (campaign) =>
+      campaign.status === "ACTIVE" && selectedCampaignIds.includes(campaign.id)
+  )
+  const accountInsights =
+    selectedCampaigns.length > 0
+      ? aggregateCampaignInsights(selectedCampaigns)
+      : reportData.accountInsights ?? {}
   const spend = parseReportNumber(accountInsights.spend)
   const impressions = parseReportNumber(accountInsights.impressions)
   const reach = parseReportNumber(accountInsights.reach)
@@ -854,11 +862,6 @@ export function ReportPreview({
   const cpm = parseReportNumber(accountInsights.cpm)
   const objectiveMetric = resolveObjectiveMetric(accountInsights, objective)
   const messageMetric = resolveMessageMetric(accountInsights)
-
-  const selectedCampaigns = reportData.campaigns.filter(
-    (campaign) =>
-      campaign.status === "ACTIVE" && selectedCampaignIds.includes(campaign.id)
-  )
 
   const chartData = (reportData.dailyInsights ?? []).map((day) => ({
     day: day.date_start?.slice(5) ?? "-",
