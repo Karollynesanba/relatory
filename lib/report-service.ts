@@ -296,7 +296,6 @@ async function buildLiveReportPayloadWithToken(params: {
     "name",
     "status",
     "objective",
-    "insights{spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values}",
   ].join(",")
   const filtering =
     filters.objective !== "ALL"
@@ -311,6 +310,8 @@ async function buildLiveReportPayloadWithToken(params: {
 
   const [
     campaigns,
+    campaignInsights,
+    accountInsights,
     dailyInsights,
     topAds,
     genderBreakdown,
@@ -322,6 +323,22 @@ async function buildLiveReportPayloadWithToken(params: {
       limit: 50,
       timeRange,
       filtering,
+    }),
+    getMetaInsights({
+      objectId: client.adAccountId!,
+      token,
+      fields:
+        "campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values",
+      timeRange,
+      level: "campaign",
+    }),
+    getMetaInsights({
+      objectId: client.adAccountId!,
+      token,
+      fields:
+        "spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values",
+      timeRange,
+      level: "account",
     }),
     getMetaInsights({
       objectId: client.adAccountId!,
@@ -348,6 +365,28 @@ async function buildLiveReportPayloadWithToken(params: {
     }),
   ])
 
+  const campaignInsightsById = new Map(
+    campaignInsights
+      .filter((insight) => Boolean(insight.campaign_id?.trim()))
+      .map((insight) => [insight.campaign_id?.trim() ?? "", insight])
+  )
+
+  const campaignsWithInsights = campaigns
+    .filter((campaign) => Boolean(campaign.id?.trim()))
+    .map((campaign) => ({
+      ...campaign,
+      insights: {
+        data: [campaignInsightsById.get(campaign.id?.trim() ?? "") ?? {}],
+      },
+    }))
+
+  const campaignsMatchingObjective =
+    filters.objective === "ALL"
+      ? campaignsWithInsights
+      : campaignsWithInsights.filter(
+          (campaign) => campaign.objective === filters.objective
+        )
+
   const activeCampaigns = await prisma.clientCampaign.findMany({
     where: {
       clientId: client.id,
@@ -360,13 +399,18 @@ async function buildLiveReportPayloadWithToken(params: {
   })
 
   const resolvedCampaigns = filterReportCampaignsByClientCampaigns(
-    campaigns as ReportPayload["campaigns"],
+    campaignsMatchingObjective as ReportPayload["campaigns"],
     activeCampaigns
   )
 
+  const resolvedAccountInsights = (accountInsights[0] ??
+    aggregateCampaignInsights(resolvedCampaigns)) as NonNullable<
+    ReportPayload["accountInsights"]
+  >
+
   return {
     campaigns: resolvedCampaigns,
-    accountInsights: aggregateCampaignInsights(resolvedCampaigns),
+    accountInsights: resolvedAccountInsights,
     dailyInsights,
     topAds,
     genderBreakdown,

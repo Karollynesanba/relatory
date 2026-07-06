@@ -190,6 +190,8 @@ export type MetaCampaign = {
 export type MetaInsightRow = {
   ad_id?: string
   ad_name?: string
+  campaign_id?: string
+  campaign_name?: string
   age?: string
   gender?: string
   spend?: string
