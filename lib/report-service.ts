@@ -296,6 +296,7 @@ async function buildLiveReportPayloadWithToken(params: {
     "name",
     "status",
     "objective",
+    "insights{spend,impressions,reach,clicks,ctr,cpc,cpm,actions,action_values}",
   ].join(",")
   const filtering =
     filters.objective !== "ALL"
@@ -371,12 +372,18 @@ async function buildLiveReportPayloadWithToken(params: {
       .map((insight) => [insight.campaign_id?.trim() ?? "", insight])
   )
 
-  const campaignsWithInsights = campaigns
+  const reportCampaigns = campaigns as ReportPayload["campaigns"]
+
+  const campaignsWithInsights = reportCampaigns
     .filter((campaign) => Boolean(campaign.id?.trim()))
     .map((campaign) => ({
       ...campaign,
       insights: {
-        data: [campaignInsightsById.get(campaign.id?.trim() ?? "") ?? {}],
+        data: [
+          campaignInsightsById.get(campaign.id?.trim() ?? "") ??
+            campaign.insights?.data?.[0] ??
+            {},
+        ],
       },
     }))
 
