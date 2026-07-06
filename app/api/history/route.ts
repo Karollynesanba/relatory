@@ -46,11 +46,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = getHistoryStatusFilter(searchParams.get("status"))
     const clientId = searchParams.get("clientId")
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
     const where: Prisma.ReportWhereInput = {
-      generatedAt: { gte: thirtyDaysAgo },
     }
 
     if (status) {
