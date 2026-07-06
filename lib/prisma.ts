@@ -6,7 +6,8 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function resolveDatabaseUrl() {
-  const rawUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim()
+  // Em runtime usamos a URL do pool. `DIRECT_URL` fica para migrações.
+  const rawUrl = process.env.DATABASE_URL?.trim() || process.env.DIRECT_URL?.trim()
 
   if (!rawUrl) {
     return undefined

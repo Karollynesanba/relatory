@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server"
 import {
-  canAccessReportClient,
   getCurrentUser,
+  scopeClientWhere,
 } from "@/lib/authorization"
 import { prisma } from "@/lib/prisma"
 import { processQueuedReportSafely } from "@/lib/report-processing"
@@ -46,19 +46,12 @@ export async function GET(request: Request) {
     }
 
     const { clientId, since, until, objective } = parsedQuery.data
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
+    const client = await prisma.client.findFirst({
+      where: scopeClientWhere(user, { id: clientId }),
       include: { manager: true },
     })
 
     if (!client) {
-      return NextResponse.json<ApiErrorResponse>(
-        { error: "Cliente não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    if (!canAccessReportClient(user, client.managerId)) {
       return NextResponse.json<ApiErrorResponse>(
         { error: "Acesso negado a este cliente" },
         { status: 403 }
@@ -105,19 +98,12 @@ export async function POST(request: Request) {
     }
 
     const { clientId, since, until, objective, presentation } = parsedBody.data
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
+    const client = await prisma.client.findFirst({
+      where: scopeClientWhere(user, { id: clientId }),
       include: { manager: true },
     })
 
     if (!client) {
-      return NextResponse.json<ApiErrorResponse>(
-        { error: "Cliente não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    if (!canAccessReportClient(user, client.managerId)) {
       return NextResponse.json<ApiErrorResponse>(
         { error: "Acesso negado a este cliente" },
         { status: 403 }
