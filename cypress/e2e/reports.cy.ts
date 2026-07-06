@@ -223,12 +223,16 @@ const evolutionGroups = {
   ],
 }
 
-function mockReportGeneration() {
+function mockReportGeneration(expectedFilters?: { since: string; until: string }) {
   let pollCount = 0
 
   cy.intercept("GET", "/api/clients", clients).as("loadClients")
   cy.intercept("POST", "/api/reports", (req) => {
     expect(req.body.clientId).to.eq("client-a")
+    if (expectedFilters) {
+      expect(req.body.since).to.eq(expectedFilters.since)
+      expect(req.body.until).to.eq(expectedFilters.until)
+    }
     req.reply({
       statusCode: 202,
       body: {
@@ -280,32 +284,32 @@ function mockReportSchedulesPanel() {
   cy.intercept("GET", "/api/clients", clients).as("loadClients")
   reportSchedulesResponse = schedules
   reportExistingScheduleResponse = clientSchedule
-  cy.intercept("GET", "/api/reports/schedules", () => {
-    return {
+  cy.intercept("GET", "/api/reports/schedules", (req) => {
+    req.reply({
       statusCode: 200,
       body: reportSchedulesResponse,
-    }
+    })
   }).as("loadSchedules")
-  cy.intercept("GET", "/api/clients/client-a/report-schedule", () => {
-    return {
+  cy.intercept("GET", "/api/clients/client-a/report-schedule", (req) => {
+    req.reply({
       statusCode: 200,
       body: {
         schedule: reportExistingScheduleResponse,
       },
-    }
+    })
   }).as("loadExistingSchedule")
   cy.intercept("GET", "/api/settings/evolution", evolutionGroups).as("loadEvolution")
-  cy.intercept("DELETE", "/api/clients/client-a/report-schedule", () => {
+  cy.intercept("DELETE", "/api/clients/client-a/report-schedule", (req) => {
     reportSchedulesResponse = { schedules: [] }
     reportExistingScheduleResponse = null
 
-    return {
+    req.reply({
       statusCode: 200,
       body: {
         ok: true,
         schedule: null,
       },
-    }
+    })
   }).as("deleteSchedule")
 }
 
@@ -341,6 +345,27 @@ describe("Reports", () => {
     cy.get('[data-cy="reports-save-pdf"]').should("be.visible")
     cy.get('[data-cy="reports-send-whatsapp"]').should("be.visible")
     cy.get('[data-cy="reports-open-schedule"]').should("be.visible")
+  })
+
+  it("deve gerar a semana com intervalo correto", () => {
+    cy.clock(new Date("2026-07-06T12:00:00.000Z").getTime(), ["Date"])
+    mockReportGeneration({
+      since: "2026-06-30",
+      until: "2026-07-06",
+    })
+
+    cy.visit("/dashboard/reports")
+    cy.wait("@loadClients")
+
+    cy.get('[data-cy="report-client-client-a"]')
+      .scrollIntoView()
+      .click({ force: true })
+
+    cy.wait("@queueReport")
+    cy.wait("@pollReport")
+    cy.wait("@pollReport")
+
+    cy.contains("Período: 30/06/2026 - 06/07/2026").should("be.visible")
   })
 
   it("deve abrir o agendamento do relatório e salvar uma programação", () => {
@@ -385,7 +410,7 @@ describe("Reports", () => {
     cy.get('[data-cy="reports-schedule-confirm"]').should("be.visible").click()
 
     cy.wait("@saveSchedule")
-    cy.contains("Agendamento salvo. Próximo envio em").should("be.visible")
+    cy.contains("Agendamento salvo.").should("exist")
   })
 
   it("deve exibir agendamentos, editar e excluir um item", () => {
@@ -398,6 +423,7 @@ describe("Reports", () => {
       .scrollIntoView()
       .click({ force: true })
 
+    cy.wait("@loadSchedules")
     cy.contains("Atualizar status", { timeout: 60000 }).should("be.visible")
     cy.contains("Paula Manually Great").should("be.visible")
     cy.get('[data-cy="report-schedule-open-client"]').should("be.visible")

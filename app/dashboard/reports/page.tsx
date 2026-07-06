@@ -296,7 +296,8 @@ export default function ReportsPage() {
     }
 
     const start = new Date(today)
-    start.setDate(today.getDate() - daysByPeriod[activePeriod])
+    // Mantém o intervalo inclusivo: 1 semana = 7 dias no total, 1 mês = 30 dias, etc.
+    start.setDate(today.getDate() - (daysByPeriod[activePeriod] - 1))
     setStartDate(formatLocalDateInput(start))
     setEndDate(formatLocalDateInput(today))
   }, [activePeriod])

@@ -32,6 +32,11 @@ export async function POST(
             name: true,
             managerId: true,
             whatsappGroupId: true,
+            reportSchedule: {
+              select: {
+                groupId: true,
+              },
+            },
           },
         },
         sendLogs: {
@@ -82,7 +87,10 @@ export async function POST(
       })
     }
 
-    const targetGroupId = body.groupId?.trim() || report.client.whatsappGroupId
+    const targetGroupId =
+      body.groupId?.trim() ||
+      report.client.reportSchedule?.groupId?.trim() ||
+      report.client.whatsappGroupId?.trim()
     const evolutionInstance = await resolveUserEvolutionInstance(user)
 
     if (!targetGroupId) {
@@ -97,7 +105,7 @@ export async function POST(
       message: body.message,
       pdfBase64: body.pdfBase64,
       pdfFileName: body.pdfFileName,
-      groupId: body.groupId,
+      groupId: targetGroupId,
       instance: evolutionInstance,
       authorization: {
         type: "manual-whatsapp-button",

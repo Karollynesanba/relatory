@@ -46,7 +46,14 @@ export async function POST(
     const { clientId, since, until, objective } = parsedBody.data
     const client = await prisma.client.findUnique({
       where: { id: clientId },
-      include: { manager: true },
+      include: {
+        manager: true,
+        reportSchedule: {
+          select: {
+            groupId: true,
+          },
+        },
+      },
     })
 
     if (!client) {
@@ -60,7 +67,12 @@ export async function POST(
       )
     }
 
-    if (!client.whatsappGroupId) {
+    const targetGroupId =
+      client.reportSchedule?.groupId?.trim() ||
+      client.whatsappGroupId?.trim() ||
+      null
+
+    if (!targetGroupId) {
       return NextResponse.json(
         { error: "Cliente sem grupo de WhatsApp configurado" },
         { status: 400 }
@@ -90,6 +102,7 @@ export async function POST(
     await sendPersistedReportNow(savedReport.reportId, {
       mode: requestBody.mode,
       message: requestBody.message,
+      groupId: targetGroupId,
       instance: evolutionInstance,
       authorization: {
         type: "manual-whatsapp-button",
