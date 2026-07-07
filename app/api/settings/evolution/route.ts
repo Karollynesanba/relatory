@@ -50,6 +50,23 @@ function mergeEvolutionGroupsById(
   return [...merged.values()]
 }
 
+function normalizeInstanceComparisonValue(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ")
+}
+
+function groupMatchesRequestedInstance(
+  group: EvolutionGroup,
+  requestedInstance: string | null | undefined
+) {
+  const normalizedRequestedInstance = normalizeInstanceComparisonValue(requestedInstance)
+
+  if (!normalizedRequestedInstance) {
+    return true
+  }
+
+  return normalizeInstanceComparisonValue(group.instance) === normalizedRequestedInstance
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
@@ -130,19 +147,23 @@ export async function GET(request: Request) {
         }
       }
 
-      const groups =
+      let groups =
         participantPhone.length > 0
           ? mergeEvolutionGroupsById([participantCatalogGroups, catalog.groups])
           : catalog.groups
+      const scopedGroups = groups.filter((group) =>
+        groupMatchesRequestedInstance(group, resolvedGroupInstance)
+      )
+      groups = scopedGroups
       let detail = ""
 
-      if (participantPhone.length > 0 && groups.length === 0) {
+      if (participantPhone.length > 0 && scopedGroups.length === 0) {
         detail = `Nenhum grupo encontrado para o n\u00famero ${requestedPhone}.`
       }
 
       if (!detail) {
         detail =
-          groups.length > 0
+          scopedGroups.length > 0
             ? participantPhone
               ? `${groups.length} grupo(s) disponível(is), incluindo os vinculados ao número ${requestedPhone}.`
               : `${groups.length} grupo(s) encontrado(s) nas inst\u00e2ncias conectadas.`
