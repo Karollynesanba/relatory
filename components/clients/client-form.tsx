@@ -6,6 +6,7 @@ import {
   type ChangeEventHandler,
   type ReactNode,
 } from "react"
+import { useSession } from "next-auth/react"
 import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
 import {
@@ -42,6 +43,7 @@ export function ClientForm({
   onChange,
   onValueChange,
 }: ClientFormProps) {
+  const { data: session } = useSession()
   const [isLoadingGroups, setIsLoadingGroups] = useState(true)
   const [groupsError, setGroupsError] = useState("")
   const [groupsResponse, setGroupsResponse] = useState<EvolutionSettingsResponse | null>(
@@ -72,8 +74,15 @@ export function ClientForm({
   }, [])
 
   useEffect(() => {
-    void loadEvolutionGroups()
-  }, [loadEvolutionGroups])
+    if (session?.user?.email) {
+      void loadEvolutionGroups()
+      return
+    }
+
+    setGroupsResponse(null)
+    setGroupsError("")
+    setIsLoadingGroups(false)
+  }, [loadEvolutionGroups, session?.user?.email])
 
   const availableGroups = groupsResponse?.groups ?? []
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
