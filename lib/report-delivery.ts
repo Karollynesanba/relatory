@@ -249,12 +249,13 @@ export async function sendPersistedReportNow(
         number: targetGroup.groupId,
         fileName,
         contentBase64: pdfBuffer.toString("base64"),
+        caption: mode === "PDF_AND_MESSAGE" ? message : null,
         instance: preferredInstance,
         resolvedInstance,
       })
     }
 
-    if (mode === "PDF_AND_MESSAGE" || mode === "MESSAGE_ONLY") {
+    if (mode === "MESSAGE_ONLY") {
       await sendWhatsAppText({
         number: targetGroup.groupId,
         text: message,

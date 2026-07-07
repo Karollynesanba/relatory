@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { AlertCircle, ChevronLeft, Loader2, RefreshCw } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { ClientForm } from "@/components/clients/client-form"
+import { MetaBrandCombobox } from "@/components/shared/meta-brand-combobox"
 import {
   clientPayloadSchema,
   getClientValidationMessage,
@@ -48,11 +49,6 @@ export default function NewClientPageClient() {
   ) {
     setError("")
     setForm((current) => ({ ...current, [name]: value }))
-  }
-
-  function handleSelectChange(event: ChangeEvent<HTMLSelectElement>) {
-    setError("")
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
   }
 
   async function loadMetaOptions() {
@@ -204,26 +200,25 @@ export default function NewClientPageClient() {
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Marca / BM *
                   </label>
-                  <select
-                    name="brandId"
+                  <MetaBrandCombobox
+                    dataCy="client-brand-select"
+                    brands={brandOptions}
                     value={form.brandId}
-                    onChange={handleSelectChange}
+                    onChange={(nextValue) => {
+                      setError("")
+                      setForm((current) => ({ ...current, brandId: nextValue }))
+                    }}
                     disabled={isLoadingMeta || brandOptions.length === 0}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C1121F]"
-                  >
-                    <option value="">
-                      {isLoadingMeta
+                    emptyLabel="Selecione uma marca / BM"
+                    placeholder="Pesquisar marca / BM..."
+                    noResultsLabel={
+                      isLoadingMeta
                         ? "Carregando marcas..."
                         : brandOptions.length > 0
-                          ? "Selecione uma marca / BM"
-                          : "Nenhuma marca disponível"}
-                    </option>
-                    {brandOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.displayName}
-                      </option>
-                    ))}
-                  </select>
+                          ? "Nenhuma marca encontrada."
+                          : "Nenhuma marca disponível"
+                    }
+                  />
                   {selectedBrand ? (
                     <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm text-gray-700">
                       <p className="font-semibold text-gray-900">{selectedBrand.name}</p>
