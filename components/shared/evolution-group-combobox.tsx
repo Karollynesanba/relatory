@@ -12,8 +12,6 @@ import {
 import { Check, ChevronDown, Search, Users } from "lucide-react"
 import type { EvolutionGroup } from "@/types/evolution.types"
 
-const GROUPS_PAGE_SIZE = 100
-
 function normalizeSearchValue(value: string) {
   return value
     .normalize("NFD")
@@ -62,7 +60,6 @@ export function EvolutionGroupCombobox({
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
-  const [visibleLimit, setVisibleLimit] = useState(GROUPS_PAGE_SIZE)
   const deferredSearch = useDeferredValue(search)
   const selectedGroupId = normalizeEvolutionGroupId(value)
   const searchableGroups = useMemo(
@@ -120,8 +117,7 @@ export function EvolutionGroupCombobox({
       .map((entry) => entry.group)
   }, [deferredSearch, groups, searchableGroups])
 
-  const visibleGroups = filteredGroups.slice(0, visibleLimit)
-  const hasMoreGroups = visibleGroups.length < filteredGroups.length
+  const visibleGroups = filteredGroups
   const selectedLabel = selectedGroup
     ? `[${selectedGroup.instance}] ${selectedGroup.subject}`
     : value
@@ -176,12 +172,6 @@ export function EvolutionGroupCombobox({
     const nextIndex = Math.max(selectedIndex, 0)
 
     setActiveIndex(nextIndex)
-    setVisibleLimit(
-      Math.max(
-        GROUPS_PAGE_SIZE,
-        Math.ceil((nextIndex + 1) / GROUPS_PAGE_SIZE) * GROUPS_PAGE_SIZE
-      )
-    )
     setIsOpen(true)
   }
 
@@ -195,9 +185,6 @@ export function EvolutionGroupCombobox({
       event.preventDefault()
       const nextIndex = Math.min(activeIndex + 1, filteredGroups.length - 1)
       setActiveIndex(Math.max(nextIndex, 0))
-      if (nextIndex >= visibleLimit) {
-        setVisibleLimit((current) => current + GROUPS_PAGE_SIZE)
-      }
       return
     }
 
@@ -217,12 +204,6 @@ export function EvolutionGroupCombobox({
       event.preventDefault()
       const lastIndex = Math.max(filteredGroups.length - 1, 0)
       setActiveIndex(lastIndex)
-      setVisibleLimit(
-        Math.max(
-          GROUPS_PAGE_SIZE,
-          Math.ceil((lastIndex + 1) / GROUPS_PAGE_SIZE) * GROUPS_PAGE_SIZE
-        )
-      )
       return
     }
 
@@ -288,7 +269,6 @@ export function EvolutionGroupCombobox({
                 onChange={(event) => {
                   setSearch(event.target.value)
                   setActiveIndex(0)
-                  setVisibleLimit(GROUPS_PAGE_SIZE)
                 }}
                 onKeyDown={handleSearchKeyDown}
                 placeholder={placeholder}
@@ -379,20 +359,6 @@ export function EvolutionGroupCombobox({
               </div>
             ) : null}
 
-            {hasMoreGroups ? (
-              <button
-                type="button"
-                onClick={() =>
-                  setVisibleLimit((current) => current + GROUPS_PAGE_SIZE)
-                }
-                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-              >
-                Carregar mais {Math.min(
-                  GROUPS_PAGE_SIZE,
-                  filteredGroups.length - visibleGroups.length
-                )} grupos
-              </button>
-            ) : null}
           </div>
         </div>
       ) : null}

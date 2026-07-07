@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useState,
@@ -48,18 +47,13 @@ export function ClientForm({
   const [groupsResponse, setGroupsResponse] = useState<EvolutionSettingsResponse | null>(
     null
   )
-  const deferredPhone = useDeferredValue(values.phone)
-
-  const loadEvolutionGroups = useCallback(async (phoneValue?: string) => {
+  const loadEvolutionGroups = useCallback(async () => {
     setIsLoadingGroups(true)
     setGroupsError("")
 
     try {
-      const phoneDigits = normalizePhoneDigits(phoneValue ?? "")
-      const query =
-        phoneDigits.length >= 10 ? `?phone=${encodeURIComponent(phoneValue ?? "")}` : ""
       const response = await fetchJsonOrThrow<EvolutionSettingsResponse>(
-        `/api/settings/evolution${query}`,
+        "/api/settings/evolution",
         { cache: "no-store" },
         "Não foi possível carregar os grupos da Evolution"
       )
@@ -78,8 +72,8 @@ export function ClientForm({
   }, [])
 
   useEffect(() => {
-    void loadEvolutionGroups(deferredPhone)
-  }, [deferredPhone, loadEvolutionGroups])
+    void loadEvolutionGroups()
+  }, [loadEvolutionGroups])
 
   const availableGroups = groupsResponse?.groups ?? []
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
@@ -170,7 +164,7 @@ export function ClientForm({
               </div>
               <button
                 type="button"
-                onClick={() => void loadEvolutionGroups(values.phone)}
+                onClick={() => void loadEvolutionGroups()}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#C1121F] hover:underline"
               >
                 <RefreshCw className={`h-3 w-3 ${isLoadingGroups ? "animate-spin" : ""}`} />
