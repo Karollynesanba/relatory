@@ -69,12 +69,9 @@ export async function GET(request: Request) {
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null
-    const preferredGroupInstances =
-      participantPhone.length > 0
-        ? undefined
-        : effectiveGroupInstance
-          ? [effectiveGroupInstance]
-          : undefined
+    const preferredGroupInstances = effectiveGroupInstance
+      ? [effectiveGroupInstance]
+      : undefined
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({
