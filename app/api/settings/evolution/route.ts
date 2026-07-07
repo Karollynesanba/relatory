@@ -69,9 +69,22 @@ export async function GET(request: Request) {
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null
-    const preferredGroupInstances = effectiveGroupInstance
-      ? [effectiveGroupInstance]
-      : undefined
+
+    if (!effectiveGroupInstance) {
+      return NextResponse.json<EvolutionSettingsResponse>({
+        configured: true,
+        connected: false,
+        instance: config.instance || null,
+        selectedInstance: null,
+        previewInstance: null,
+        detail:
+          "Sua conta nao possui uma instancia Evolution configurada. Configure a sua instancia para visualizar os grupos.",
+        groups: [],
+        instances: [],
+      })
+    }
+
+    const preferredGroupInstances = [effectiveGroupInstance]
 
     if (!config.configured) {
       return NextResponse.json<EvolutionSettingsResponse>({

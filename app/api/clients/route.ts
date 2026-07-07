@@ -6,12 +6,77 @@ import {
   scopeClientWhere,
 } from "@/lib/authorization"
 import { formatLocalDateInput } from "@/lib/date-input"
+import { loadEvolutionCatalog } from "@/lib/evolution-api"
+import { resolveUserEvolutionInstance } from "@/lib/evolution-preference"
 import { prisma } from "@/lib/prisma"
 import { logError } from "@/lib/safe-logger"
+import { normalizeWhatsAppGroupId } from "@/lib/whatsapp-group"
 import {
   clientPayloadSchema,
   getClientValidationMessage,
 } from "@/lib/validations/client.schema"
+
+function parseClientWhatsAppGroupTarget(value: string | null | undefined) {
+  const rawValue = value?.trim()
+
+  if (!rawValue) {
+    return null
+  }
+
+  const separatorIndex = rawValue.indexOf("::")
+  const instance =
+    separatorIndex >= 0 ? rawValue.slice(0, separatorIndex).trim() : null
+  const groupId =
+    separatorIndex >= 0
+      ? rawValue.slice(separatorIndex + 2).trim()
+      : rawValue
+  const normalizedGroupId = normalizeWhatsAppGroupId(groupId)
+
+  if (!normalizedGroupId) {
+    return null
+  }
+
+  return {
+    groupId: normalizedGroupId,
+    instance: instance || null,
+  }
+}
+
+async function assertClientGroupBelongsToUserInstance(
+  user: Pick<AuthenticatedUser, "id" | "role" | "email">,
+  whatsappGroupId: string | null | undefined
+) {
+  const target = parseClientWhatsAppGroupTarget(whatsappGroupId)
+
+  if (!target) {
+    return
+  }
+
+  const userInstance = await resolveUserEvolutionInstance(user)
+
+  if (!userInstance) {
+    throw new Error(
+      "Sua conta nao possui uma instancia Evolution configurada para validar grupos."
+    )
+  }
+
+  if (target.instance && target.instance !== userInstance) {
+    throw new Error(
+      "O grupo selecionado nao pertence a instancia Evolution desta conta."
+    )
+  }
+
+  const catalog = await loadEvolutionCatalog({ groupInstances: [userInstance] })
+  const matchesUserInstance = catalog.groups.some(
+    (group) => group.id === target.groupId
+  )
+
+  if (!matchesUserInstance) {
+    throw new Error(
+      "O grupo selecionado nao pertence a instancia Evolution desta conta."
+    )
+  }
+}
 
 function buildClientFilters(searchParams: URLSearchParams) {
   const search = searchParams.get("search")?.trim() ?? ""
@@ -169,6 +234,7 @@ export async function POST(request: Request) {
     }
 
     const clientData = parsedClient.data
+    await assertClientGroupBelongsToUserInstance(user, clientData.whatsappGroupId)
     const client = await prisma.client.create({
       data: {
         name: clientData.name,
@@ -186,9 +252,13 @@ export async function POST(request: Request) {
     return NextResponse.json(client, { status: 201 })
   } catch (error) {
     logError("clients.create", error)
+    const message = error instanceof Error ? error.message : "Erro ao criar cliente"
+    const status = message.includes("instancia Evolution") || message.includes("pertence")
+      ? 400
+      : 500
     return NextResponse.json(
-      { error: "Erro ao criar cliente" },
-      { status: 500 }
+      { error: message },
+      { status }
     )
   }
 }
