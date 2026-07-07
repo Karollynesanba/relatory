@@ -978,9 +978,11 @@ export async function loadEvolutionCatalog(
     }
   }
 
+  const hasExplicitGroupInstanceFilter = Boolean(options?.groupInstances?.length)
+
   if (
     groups.length === 0 &&
-    options?.groupInstances?.length &&
+    !hasExplicitGroupInstanceFilter &&
     instances.length > 0
   ) {
     const fallbackTargets = buildGroupFetchTargets(config, instances, undefined)
