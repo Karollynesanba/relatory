@@ -53,7 +53,7 @@ export function ClientForm({
 
     try {
       const response = await fetchJsonOrThrow<EvolutionSettingsResponse>(
-        "/api/settings/evolution",
+        "/api/settings/evolution?includeParticipants=1",
         { cache: "no-store" },
         "Não foi possível carregar os grupos da Evolution"
       )

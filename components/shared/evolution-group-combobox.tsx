@@ -20,6 +20,38 @@ function normalizeSearchValue(value: string) {
     .trim()
 }
 
+function extractGroupSearchValues(group: EvolutionGroup) {
+  const values = [group.subject, group.instance, group.id, buildEvolutionGroupValue(group)]
+
+  if (typeof group.subjectOwner === "string" && group.subjectOwner.trim()) {
+    values.push(group.subjectOwner)
+  }
+
+  if (Array.isArray(group.participants)) {
+    for (const participant of group.participants) {
+      if (typeof participant === "string") {
+        values.push(participant)
+        continue
+      }
+
+      if (!participant || typeof participant !== "object") {
+        continue
+      }
+
+      const record = participant as Record<string, unknown>
+      for (const key of ["id", "jid", "remoteJid", "number", "phone", "phoneNumber", "waId", "user", "name", "pushName"]) {
+        const value = record[key]
+
+        if (typeof value === "string" && value.trim()) {
+          values.push(value)
+        }
+      }
+    }
+  }
+
+  return values
+}
+
 export function buildEvolutionGroupValue(group: EvolutionGroup) {
   return `${group.instance}::${group.id}`
 }
@@ -66,9 +98,7 @@ export function EvolutionGroupCombobox({
     () =>
       groups.map((group) => ({
         group,
-        searchValue: normalizeSearchValue(
-          `${group.subject} ${group.instance} ${group.id} ${buildEvolutionGroupValue(group)}`
-        ),
+        searchValue: normalizeSearchValue(extractGroupSearchValues(group).join(" ")),
         exactMatch:
           normalizeSearchValue(group.id) === normalizeSearchValue(deferredSearch) ||
           normalizeSearchValue(buildEvolutionGroupValue(group)) ===

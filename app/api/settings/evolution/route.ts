@@ -78,6 +78,9 @@ export async function GET(request: Request) {
     const requestUrl = new URL(request.url)
     const requestedPhone = requestUrl.searchParams.get("phone")?.trim() ?? ""
     const participantPhone = requestedPhone.replace(/\D/g, "")
+    const includeParticipants =
+      requestUrl.searchParams.get("includeParticipants") === "1" ||
+      requestUrl.searchParams.get("includeParticipants") === "true"
     const previewInstance = normalizeEvolutionInstancePreference(
       requestUrl.searchParams.get("previewInstance")
     )
@@ -120,6 +123,7 @@ export async function GET(request: Request) {
     try {
       const catalog = await loadEvolutionCatalog({
         groupInstances: preferredGroupInstances,
+        includeParticipants,
       })
       const resolvedPreviewInstance =
         findEvolutionInstanceMatch(previewInstance, catalog.instances)?.name ??
@@ -140,6 +144,7 @@ export async function GET(request: Request) {
             await loadEvolutionCatalog({
               groupInstances: preferredGroupInstances,
               participantPhone: participantPhone || null,
+              includeParticipants: true,
             })
           ).groups
         } catch (error) {

@@ -1,6 +1,7 @@
 export type EvolutionGroup = {
   id: string
   subject: string
+  subjectOwner?: string | null
   size: number
   announce: boolean
   instance: string

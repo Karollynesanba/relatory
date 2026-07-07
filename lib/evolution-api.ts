@@ -50,6 +50,7 @@ type EvolutionCatalog = {
 type EvolutionCatalogOptions = {
   groupInstances?: string[]
   participantPhone?: string | null
+  includeParticipants?: boolean
 }
 
 function getRequiredEnv(name: "EVOLUTION_API_URL" | "EVOLUTION_API_KEY" | "EVOLUTION_INSTANCE") {
@@ -755,6 +756,10 @@ function mapEvolutionGroupResponseItem(
   return {
     id,
     subject: normalizeEvolutionGroupSubject(group),
+    subjectOwner:
+      typeof group.subjectOwner === "string" && group.subjectOwner.trim()
+        ? group.subjectOwner.trim()
+        : null,
     size: normalizeEvolutionGroupSize(group),
     announce: Boolean(group.announce),
     instance,
@@ -917,6 +922,7 @@ export async function loadEvolutionCatalog(
     options?.groupInstances
   )
   const participantPhoneDigits = normalizePhoneDigits(options?.participantPhone)
+  const includeParticipants = options?.includeParticipants ?? Boolean(participantPhoneDigits)
   async function fetchGroupsForTargets(instanceTargets: string[]) {
     const groupResults = await Promise.allSettled(
       instanceTargets.map(async (instance) => ({
@@ -924,7 +930,7 @@ export async function loadEvolutionCatalog(
         groups: await fetchEvolutionGroupsForInstance(
           config,
           instance,
-          Boolean(participantPhoneDigits)
+          includeParticipants
         ),
       }))
     )
