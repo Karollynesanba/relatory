@@ -9,14 +9,14 @@ test("getEvolutionInstanceForMetaPreset maps presets to their matching instance"
   assert.equal(getEvolutionInstanceForMetaPreset("BRAYTON"), "Brayton")
 })
 
-test("resolveUserEvolutionInstance prefers the explicit instance on the profile", async () => {
+test("resolveUserEvolutionInstance prefers the Meta preset over the explicit instance", async () => {
   const instance = await resolveUserEvolutionInstance({
     id: "user-1",
     evolutionInstance: "Brayton",
     metaAccessToken: "preset:v1:ISAQUE",
   })
 
-  assert.equal(instance, "Brayton")
+  assert.equal(instance, "Isaque")
 })
 
 test("resolveUserEvolutionInstance falls back to the Meta preset when no instance is saved", async () => {

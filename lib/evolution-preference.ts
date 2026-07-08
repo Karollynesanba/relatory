@@ -49,15 +49,20 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
   evolutionInstance: string | null
   metaAccessToken: string | null
 } | null) {
+  const preset = getMetaTokenPresetFromStoredToken(profile?.metaAccessToken ?? null)
+  const presetInstance = getEvolutionInstanceForMetaPreset(preset)
+
+  if (presetInstance) {
+    return presetInstance
+  }
+
   const explicitInstance = normalizeInstanceName(profile?.evolutionInstance)
 
   if (explicitInstance) {
     return explicitInstance
   }
 
-  const preset = getMetaTokenPresetFromStoredToken(profile?.metaAccessToken ?? null)
-
-  return getEvolutionInstanceForMetaPreset(preset)
+  return null
 }
 
 export async function resolveUserEvolutionInstance(
