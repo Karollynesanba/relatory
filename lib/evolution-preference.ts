@@ -19,6 +19,8 @@ type EvolutionProfileSource =
   | undefined
   | {
       id: string
+      name?: string | null
+      email?: string | null
       evolutionInstance: string | null
       metaAccessToken: string | null
     }
@@ -37,6 +39,8 @@ async function resolveUserEvolutionInstanceFromId(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      name: true,
+      email: true,
       evolutionInstance: true,
       metaAccessToken: true,
     },
@@ -45,10 +49,56 @@ async function resolveUserEvolutionInstanceFromId(userId: string) {
   return resolveUserEvolutionInstanceFromProfile(user)
 }
 
+function normalizeIdentityText(value: unknown) {
+  return typeof value === "string"
+    ? value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    : ""
+}
+
+function resolveEvolutionInstanceFromIdentity(
+  name: unknown,
+  email: unknown
+) {
+  const haystack = `${normalizeIdentityText(name)} ${normalizeIdentityText(email)}`
+
+  if (!haystack.trim()) {
+    return null
+  }
+
+  if (haystack.includes("brayton")) {
+    return "Brayton"
+  }
+
+  if (haystack.includes("isaque")) {
+    return "Isaque"
+  }
+
+  if (haystack.includes("carlos")) {
+    return "Carlos"
+  }
+
+  if (haystack.includes("jeff")) {
+    return "Jeff"
+  }
+
+  return null
+}
+
 function resolveUserEvolutionInstanceFromProfile(profile: {
+  name?: string | null
+  email?: string | null
   evolutionInstance: string | null
   metaAccessToken: string | null
 } | null) {
+  const identityInstance = resolveEvolutionInstanceFromIdentity(
+    profile?.name,
+    profile?.email
+  )
+
+  if (identityInstance) {
+    return identityInstance
+  }
+
   const preset = getMetaTokenPresetFromStoredToken(profile?.metaAccessToken ?? null)
   const presetInstance = getEvolutionInstanceForMetaPreset(preset)
 

@@ -8,6 +8,7 @@ type Role = "ADMIN" | "MANAGER"
 export type AuthenticatedUser = Pick<
   User,
   | "id"
+  | "name"
   | "email"
   | "role"
   | "passwordHash"
@@ -68,6 +69,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   try {
     const { session, user } = await getSessionUser({
       id: true,
+      name: true,
       email: true,
       role: true,
       passwordHash: true,
@@ -102,6 +104,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
 
       return {
         id: session.user.id || bootstrapAccount.id,
+        name: bootstrapAccount.name,
         email: bootstrapAccount.email,
         role: bootstrapAccount.role,
         passwordHash: "",
