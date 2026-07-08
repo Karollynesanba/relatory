@@ -13,6 +13,30 @@ const META_PRESET_TO_EVOLUTION_INSTANCE: Record<MetaTokenPreset, string> = {
   BRAYTON: "Brayton",
 }
 
+type EvolutionIdentityRule = {
+  instance: string
+  aliases: string[]
+}
+
+const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
+  {
+    instance: "Brayton",
+    aliases: ["braytonmaycon5@gmail.com", "brayton maycon", "brayton"],
+  },
+  {
+    instance: "Isaque",
+    aliases: ["isaque@greatgo.com", "isaque"],
+  },
+  {
+    instance: "Carlos",
+    aliases: ["carlos@greatgo.com", "carlos silva", "carlos"],
+  },
+  {
+    instance: "Jeff",
+    aliases: ["jeff@greatgo.com", "jeff"],
+  },
+]
+
 type EvolutionProfileSource =
   | string
   | null
@@ -65,20 +89,16 @@ function resolveEvolutionInstanceFromIdentity(
     return null
   }
 
-  if (haystack.includes("brayton")) {
-    return "Brayton"
-  }
+  for (const rule of EVOLUTION_IDENTITY_RULES) {
+    if (
+      rule.aliases.some((alias) => {
+        const normalizedAlias = normalizeIdentityText(alias)
 
-  if (haystack.includes("isaque")) {
-    return "Isaque"
-  }
-
-  if (haystack.includes("carlos")) {
-    return "Carlos"
-  }
-
-  if (haystack.includes("jeff")) {
-    return "Jeff"
+        return normalizedAlias ? haystack.includes(normalizedAlias) : false
+      })
+    ) {
+      return rule.instance
+    }
   }
 
   return null
