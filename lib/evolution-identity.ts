@@ -5,11 +5,11 @@ export type EvolutionIdentityRule = {
 
 const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
   {
-    instance: "Brayton",
+    instance: "Brayton - GreatGo",
     aliases: ["braytonmaycon5@gmail.com", "brayton maycon", "brayton"],
   },
   {
-    instance: "Isaque",
+    instance: "Isaque - GreatGo",
     aliases: ["isaque@greatgo.com", "isaque"],
   },
   {
@@ -17,8 +17,8 @@ const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
     aliases: ["carlos@greatgo.com", "carlos silva", "carlos"],
   },
   {
-    instance: "Jeff",
-    aliases: ["jeff@greatgo.com", "jeff"],
+    instance: "Jefereson",
+    aliases: ["jeferson", "jefereson", "jefferson", "jeff", "jefereson luiz"],
   },
 ]
 

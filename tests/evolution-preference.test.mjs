@@ -5,8 +5,8 @@ import {
 } from "@/lib/evolution-preference"
 
 test("getEvolutionInstanceForMetaPreset maps presets to their matching instance", async () => {
-  assert.equal(getEvolutionInstanceForMetaPreset("ISAQUE"), "Isaque")
-  assert.equal(getEvolutionInstanceForMetaPreset("BRAYTON"), "Brayton")
+  assert.equal(getEvolutionInstanceForMetaPreset("ISAQUE"), "Isaque - GreatGo")
+  assert.equal(getEvolutionInstanceForMetaPreset("BRAYTON"), "Brayton - GreatGo")
 })
 
 test("resolveUserEvolutionInstance infers instance from the user identity", async () => {
@@ -30,7 +30,19 @@ test("resolveUserEvolutionInstance favors the Brayton identity even with a stale
     metaAccessToken: null,
   })
 
-  assert.equal(instance, "Brayton")
+  assert.equal(instance, "Brayton - GreatGo")
+})
+
+test("resolveUserEvolutionInstance resolves Jeff to the exact Evolution instance name", async () => {
+  const instance = await resolveUserEvolutionInstance({
+    id: "user-1c",
+    name: "Jeferson Luiz",
+    email: "jefereson@example.com",
+    evolutionInstance: null,
+    metaAccessToken: null,
+  })
+
+  assert.equal(instance, "Jefereson")
 })
 
 test("resolveUserEvolutionInstance falls back to the Meta preset when no instance is saved", async () => {
@@ -42,7 +54,7 @@ test("resolveUserEvolutionInstance falls back to the Meta preset when no instanc
     metaAccessToken: "preset:v1:ISAQUE",
   })
 
-  assert.equal(instance, "Isaque")
+  assert.equal(instance, "Isaque - GreatGo")
 })
 
 test("resolveUserEvolutionInstance uses the explicit instance when identity is unknown", async () => {
@@ -50,9 +62,9 @@ test("resolveUserEvolutionInstance uses the explicit instance when identity is u
     id: "user-3",
     name: "Equipe Operacional",
     email: "operacional@greatgo.com",
-    evolutionInstance: "Jeff",
+    evolutionInstance: "Jefereson",
     metaAccessToken: null,
   })
 
-  assert.equal(instance, "Jeff")
+  assert.equal(instance, "Jefereson")
 })

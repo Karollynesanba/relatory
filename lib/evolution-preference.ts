@@ -10,8 +10,8 @@ function normalizeInstanceName(value: unknown) {
 }
 
 const META_PRESET_TO_EVOLUTION_INSTANCE: Record<MetaTokenPreset, string> = {
-  ISAQUE: "Isaque",
-  BRAYTON: "Brayton",
+  ISAQUE: "Isaque - GreatGo",
+  BRAYTON: "Brayton - GreatGo",
 }
 
 type EvolutionProfileSource =
