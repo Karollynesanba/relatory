@@ -957,7 +957,7 @@ export async function loadEvolutionCatalog(
 
   let groups = await fetchGroupsForTargets(targets)
 
-  if (!participantPhoneDigits) {
+  if (!participantPhoneDigits && !hasExplicitGroupInstanceFilter) {
     const missingTargets = instances
       .map((instance) => instance.name)
       .filter(

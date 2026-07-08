@@ -229,6 +229,52 @@ test("loadEvolutionCatalog falls back to connected instances when the saved inst
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog does not widen the search when an explicit instance is requested", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          { name: "GreatGo", status: "open" },
+          { name: "Carlos", status: "open" },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/GreatGo")) {
+      return new Response(
+        JSON.stringify([
+          { id: "120@g.us", subject: "Grupo Brayton", size: 10, announce: false },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/Carlos")) {
+      throw new Error(`A busca nao deveria widen para Carlos: ${url}`)
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({ groupInstances: ["GreatGo"] })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].instance, "GreatGo")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("/group/fetchAllGroups/Carlos")),
+    false
+  )
+
+  restoreEnvironment()
+})
+
 test("loadEvolutionCatalog also inspects disconnected instances when there is no participant filter", async () => {
   setEvolutionEnv()
   const requestedUrls = []
