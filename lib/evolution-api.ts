@@ -956,6 +956,7 @@ export async function loadEvolutionCatalog(
   }
 
   let groups = await fetchGroupsForTargets(targets)
+  const hasExplicitGroupInstanceFilter = Boolean(options?.groupInstances?.length)
 
   if (!participantPhoneDigits && !hasExplicitGroupInstanceFilter) {
     const missingTargets = instances
@@ -983,8 +984,6 @@ export async function loadEvolutionCatalog(
       }
     }
   }
-
-  const hasExplicitGroupInstanceFilter = Boolean(options?.groupInstances?.length)
 
   if (
     groups.length === 0 &&

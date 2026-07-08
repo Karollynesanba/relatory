@@ -9,6 +9,7 @@ import {
 import { useSession } from "next-auth/react"
 import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
+import { resolveEvolutionInstanceFromIdentity } from "@/lib/evolution-identity"
 import {
   EvolutionGroupCombobox,
   buildEvolutionGroupValue,
@@ -84,7 +85,27 @@ export function ClientForm({
     setIsLoadingGroups(false)
   }, [loadEvolutionGroups, session?.user?.email])
 
-  const availableGroups = groupsResponse?.groups ?? []
+  const preferredInstance = useMemo(
+    () =>
+      resolveEvolutionInstanceFromIdentity(
+        session?.user?.name,
+        session?.user?.email
+      ) ?? groupsResponse?.selectedInstance ?? groupsResponse?.instance ?? null,
+    [groupsResponse?.instance, groupsResponse?.selectedInstance, session?.user?.email, session?.user?.name]
+  )
+  const availableGroups = useMemo(() => {
+    const groups = groupsResponse?.groups ?? []
+
+    if (!preferredInstance) {
+      return groups
+    }
+
+    const normalizedPreferredInstance = preferredInstance.trim().toLowerCase()
+
+    return groups.filter(
+      (group) => group.instance.trim().toLowerCase() === normalizedPreferredInstance
+    )
+  }, [groupsResponse?.groups, preferredInstance])
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)
   const matchedGroup = useMemo(() => {
     const normalizedManualValue = manualGroupValue.trim().toLowerCase()

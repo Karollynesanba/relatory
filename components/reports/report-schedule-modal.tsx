@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Calendar, Clock3, Loader2, RefreshCw, Repeat, Users, X } from "lucide-react"
+import { resolveEvolutionInstanceFromIdentity } from "@/lib/evolution-identity"
 import {
   EvolutionGroupCombobox,
   normalizeEvolutionGroupId,
@@ -83,6 +85,7 @@ function buildInitialForm(props: Pick<
 
 export function ReportScheduleModal(props: ReportScheduleModalProps) {
   const { defaultGroupId, defaultMessage, defaultSendMode, open } = props
+  const { data: session } = useSession()
   const clientIds = props.clientIds ?? (props.clientId ? [props.clientId] : [])
   const primaryClientId = clientIds[0] ?? null
   const isBatchMode = clientIds.length > 1
@@ -193,7 +196,27 @@ export function ReportScheduleModal(props: ReportScheduleModalProps) {
     () => formatScheduleTime(form.hour, form.minute),
     [form.hour, form.minute]
   )
-  const availableGroups = groupsResponse?.groups ?? []
+  const preferredInstance = useMemo(
+    () =>
+      resolveEvolutionInstanceFromIdentity(
+        session?.user?.name,
+        session?.user?.email
+      ) ?? groupsResponse?.selectedInstance ?? groupsResponse?.instance ?? null,
+    [groupsResponse?.instance, groupsResponse?.selectedInstance, session?.user?.email, session?.user?.name]
+  )
+  const availableGroups = useMemo(() => {
+    const groups = groupsResponse?.groups ?? []
+
+    if (!preferredInstance) {
+      return groups
+    }
+
+    const normalizedPreferredInstance = preferredInstance.trim().toLowerCase()
+
+    return groups.filter(
+      (group) => group.instance.trim().toLowerCase() === normalizedPreferredInstance
+    )
+  }, [groupsResponse?.groups, preferredInstance])
   const manualGroupValue = normalizeEvolutionGroupId(form.groupId)
 
   if (!props.open || !primaryClientId) {

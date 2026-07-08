@@ -3,6 +3,7 @@ import {
   getMetaTokenPresetFromStoredToken,
   type MetaTokenPreset,
 } from "@/lib/meta-token"
+import { resolveEvolutionInstanceFromIdentity } from "@/lib/evolution-identity"
 
 function normalizeInstanceName(value: unknown) {
   return typeof value === "string" ? value.trim() || null : null
@@ -13,30 +14,6 @@ const META_PRESET_TO_EVOLUTION_INSTANCE: Record<MetaTokenPreset, string> = {
   BRAYTON: "Brayton",
 }
 
-type EvolutionIdentityRule = {
-  instance: string
-  aliases: string[]
-}
-
-const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
-  {
-    instance: "Brayton",
-    aliases: ["braytonmaycon5@gmail.com", "brayton maycon", "brayton"],
-  },
-  {
-    instance: "Isaque",
-    aliases: ["isaque@greatgo.com", "isaque"],
-  },
-  {
-    instance: "Carlos",
-    aliases: ["carlos@greatgo.com", "carlos silva", "carlos"],
-  },
-  {
-    instance: "Jeff",
-    aliases: ["jeff@greatgo.com", "jeff"],
-  },
-]
-
 type EvolutionProfileSource =
   | string
   | null
@@ -45,8 +22,8 @@ type EvolutionProfileSource =
       id: string
       name?: string | null
       email?: string | null
-      evolutionInstance: string | null
-      metaAccessToken: string | null
+      evolutionInstance?: string | null
+      metaAccessToken?: string | null
     }
 
 export function getEvolutionInstanceForMetaPreset(
@@ -73,42 +50,11 @@ async function resolveUserEvolutionInstanceFromId(userId: string) {
   return resolveUserEvolutionInstanceFromProfile(user)
 }
 
-function normalizeIdentityText(value: unknown) {
-  return typeof value === "string"
-    ? value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    : ""
-}
-
-function resolveEvolutionInstanceFromIdentity(
-  name: unknown,
-  email: unknown
-) {
-  const haystack = `${normalizeIdentityText(name)} ${normalizeIdentityText(email)}`
-
-  if (!haystack.trim()) {
-    return null
-  }
-
-  for (const rule of EVOLUTION_IDENTITY_RULES) {
-    if (
-      rule.aliases.some((alias) => {
-        const normalizedAlias = normalizeIdentityText(alias)
-
-        return normalizedAlias ? haystack.includes(normalizedAlias) : false
-      })
-    ) {
-      return rule.instance
-    }
-  }
-
-  return null
-}
-
 function resolveUserEvolutionInstanceFromProfile(profile: {
   name?: string | null
   email?: string | null
-  evolutionInstance: string | null
-  metaAccessToken: string | null
+  evolutionInstance?: string | null
+  metaAccessToken?: string | null
 } | null) {
   const identityInstance = resolveEvolutionInstanceFromIdentity(
     profile?.name,
