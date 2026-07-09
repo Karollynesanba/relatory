@@ -126,18 +126,43 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
         accountId: bootstrapAccount.id,
       })
 
-      return {
-        id: session.user.id || bootstrapAccount.id,
-        name: bootstrapAccount.name,
-        email: bootstrapAccount.email,
-        role: bootstrapAccount.role,
-        passwordHash: "",
-        metaAccessToken: null,
-        metaTokenExpiresAt: null,
-        evolutionInstance: resolveEvolutionInstanceForUser({
+      const ensuredBootstrapUser = await prisma.user.upsert({
+        where: { email: bootstrapAccount.email },
+        update: {
           name: bootstrapAccount.name,
+          role: bootstrapAccount.role,
+          evolutionInstance:
+            resolveEvolutionInstanceForUser({
+              name: bootstrapAccount.name,
+              email: bootstrapAccount.email,
+            }) ?? null,
+        },
+        create: {
+          id: bootstrapAccount.id,
           email: bootstrapAccount.email,
-        }),
+          name: bootstrapAccount.name,
+          passwordHash: "",
+          role: bootstrapAccount.role,
+          evolutionInstance:
+            resolveEvolutionInstanceForUser({
+              name: bootstrapAccount.name,
+              email: bootstrapAccount.email,
+            }) ?? null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          passwordHash: true,
+          metaAccessToken: true,
+          metaTokenExpiresAt: true,
+          evolutionInstance: true,
+        },
+      })
+
+      return {
+        ...ensuredBootstrapUser,
       }
     }
 

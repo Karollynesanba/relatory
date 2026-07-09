@@ -238,9 +238,18 @@ export async function POST(request: Request) {
       }
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        name: user.name ?? user.email,
+        role: user.role,
+        evolutionInstance: matchedInstance?.name ?? selectedInstance,
+      },
+      create: {
+        email: user.email,
+        name: user.name ?? user.email,
+        passwordHash: user.passwordHash ?? "",
+        role: user.role,
         evolutionInstance: matchedInstance?.name ?? selectedInstance,
       },
     })
