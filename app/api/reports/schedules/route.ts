@@ -4,7 +4,8 @@ import {
   getCurrentUser,
   scopeSharedReportClientWhere,
 } from "@/lib/authorization"
-import { listEvolutionGroups } from "@/lib/evolution-api"
+import { loadEvolutionCatalog } from "@/lib/evolution-api"
+import { resolveUserEvolutionInstance } from "@/lib/evolution-preference"
 import { prisma } from "@/lib/prisma"
 import { parsePendingReportJobPayload } from "@/lib/report-domain"
 import { serializeReportSchedule } from "@/lib/report-schedule"
@@ -194,6 +195,7 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
+    const userEvolutionInstance = await resolveUserEvolutionInstance(user)
 
     const clients = await prisma.client.findMany({
       where: scopeSharedReportClientWhere(user, {
@@ -238,7 +240,9 @@ export async function GET() {
     let groupNameById = new Map<string, string>()
 
     try {
-      const groups = await listEvolutionGroups()
+      const groups = userEvolutionInstance
+        ? (await loadEvolutionCatalog({ groupInstances: [userEvolutionInstance] })).groups
+        : []
       groupNameById = new Map(
         groups
           .filter((group) => Boolean(group.id))

@@ -958,51 +958,6 @@ export async function loadEvolutionCatalog(
   let groups = await fetchGroupsForTargets(targets)
   const hasExplicitGroupInstanceFilter = Boolean(options?.groupInstances?.length)
 
-  if (!participantPhoneDigits && !hasExplicitGroupInstanceFilter) {
-    const missingTargets = instances
-      .map((instance) => instance.name)
-      .filter(
-        (instance) =>
-          !targets.some(
-            (target) =>
-              normalizeEvolutionInstanceKey(target) ===
-              normalizeEvolutionInstanceKey(instance)
-          )
-      )
-
-    if (missingTargets.length > 0) {
-      const additionalGroups = await fetchGroupsForTargets(missingTargets)
-
-      if (additionalGroups.length > 0) {
-        groups = mergeEvolutionGroups([
-          {
-            instance: "",
-            groups: [...groups, ...additionalGroups],
-          },
-        ])
-        targets.splice(0, targets.length, ...dedupeStrings([...targets, ...missingTargets]))
-      }
-    }
-  }
-
-  if (
-    groups.length === 0 &&
-    !hasExplicitGroupInstanceFilter &&
-    instances.length > 0
-  ) {
-    const fallbackTargets = buildGroupFetchTargets(config, instances, undefined)
-
-    if (
-      fallbackTargets.length > 0 &&
-      fallbackTargets.join("|") !== targets.join("|")
-    ) {
-      groups = await fetchGroupsForTargets(fallbackTargets)
-      if (groups.length > 0) {
-        targets.splice(0, targets.length, ...fallbackTargets)
-      }
-    }
-  }
-
   if (participantPhoneDigits) {
     groups = groups.filter((group) =>
       groupMatchesParticipantPhone(group, participantPhoneDigits)

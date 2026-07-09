@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { getCurrentUser, isAdmin } from "@/lib/authorization"
-import { listEvolutionGroups } from "@/lib/evolution-api"
+import { loadEvolutionCatalog } from "@/lib/evolution-api"
 import { prisma } from "@/lib/prisma"
 import {
   getHistoryStatusFilter,
@@ -9,6 +9,7 @@ import {
   mapScheduleToHistoryRow,
 } from "@/lib/report-domain"
 import { runDueReportScheduleSweep } from "@/lib/report-schedule-fallback"
+import { resolveUserEvolutionInstance } from "@/lib/evolution-preference"
 import { logError } from "@/lib/safe-logger"
 
 const HISTORY_GROUP_LOOKUP_TIMEOUT_MS = 5_000
@@ -33,6 +34,7 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "NÃ£o autorizado" }, { status: 401 })
     }
+    const userEvolutionInstance = await resolveUserEvolutionInstance(user)
 
     after(() => {
       void runDueReportScheduleSweep({
@@ -122,7 +124,11 @@ export async function GET(request: Request) {
     })
 
     const groupsPromise = withTimeout(
-      listEvolutionGroups(),
+      userEvolutionInstance
+        ? loadEvolutionCatalog({ groupInstances: [userEvolutionInstance] }).then(
+            (catalog) => catalog.groups
+          )
+        : Promise.resolve([]),
       HISTORY_GROUP_LOOKUP_TIMEOUT_MS,
       []
     ).catch((error) => {
