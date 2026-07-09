@@ -49,7 +49,8 @@ function normalizeEvolutionBaseUrl(raw: string): string {
 async function getEvolutionConnectionStatus() {
   const evolutionApiUrlRaw = Deno.env.get("EVOLUTION_API_URL");
   const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instanceNameRaw = Deno.env.get("EVOLUTION_INSTANCE_NAME");
+  const instanceNameRaw =
+    Deno.env.get("EVOLUTION_INSTANCE_NAME") ?? Deno.env.get("EVOLUTION_INSTANCE");
 
   if (!evolutionApiUrlRaw || !evolutionApiKey || !instanceNameRaw) {
     throw new Error("Evolution API not configured");
