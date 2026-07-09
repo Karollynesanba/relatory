@@ -24,7 +24,7 @@ test("resolveUserEvolutionInstance infers instance from the user identity", asyn
 test("resolveUserEvolutionInstance favors the Brayton identity even with a stale instance saved", async () => {
   const instance = await resolveUserEvolutionInstance({
     id: "user-1b",
-    name: "Pessoa sem pista",
+    name: "Brayton Maycon | Assessoria Great",
     email: "braytonmaycon5@gmail.com",
     evolutionInstance: "Carlos",
     metaAccessToken: null,
