@@ -224,7 +224,7 @@ function readEvolutionInstanceCandidate(
       ? value.instance
       : null
   const name = normalizeEvolutionInstanceName(
-    value.name ?? value.instanceName ?? instancePayload?.instanceName
+    instancePayload?.instanceName ?? value.instanceName ?? value.name
   )
 
   if (!name) {
