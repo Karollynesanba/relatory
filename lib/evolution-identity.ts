@@ -18,7 +18,16 @@ const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
   },
   {
     instance: "Jefereson",
-    aliases: ["jeferson", "jefereson", "jefferson", "jeff", "jefereson luiz", "luiz"],
+    aliases: [
+      "jeferson",
+      "jefereson",
+      "jefferson",
+      "jeff",
+      "jefereson luiz",
+      "luiz",
+      "admin@greatgo.com",
+      "administrador",
+    ],
   },
 ]
 
