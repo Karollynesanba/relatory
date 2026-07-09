@@ -14,7 +14,7 @@ const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
   },
   {
     instance: "Carlos",
-    aliases: ["carlos@greatgo.com", "carlos silva", "carlos"],
+    aliases: ["carlos@greatgo.com", "carlos silva", "carlos", "cl andre"],
   },
   {
     instance: "Jefereson",
