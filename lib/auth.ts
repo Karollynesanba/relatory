@@ -4,6 +4,7 @@ import {
   ensureBootstrapLoginAccount,
   getBootstrapLoginAccount,
 } from "@/lib/auth-accounts"
+import { resolveEvolutionInstanceForUser } from "@/lib/evolution-identity"
 import { withTimeout } from "@/lib/async"
 import { prisma } from "@/lib/prisma"
 import { verifyPassword } from "@/lib/password"
@@ -49,12 +50,15 @@ function buildAuthorizedUser(user: {
   role: Role
   evolutionInstance?: string | null
 }) {
+  const resolvedEvolutionInstance =
+    user.evolutionInstance ?? resolveEvolutionInstanceForUser(user)
+
   return {
     id: user.id,
     email: user.email,
     name: user.name ?? user.email,
     role: user.role,
-    evolutionInstance: user.evolutionInstance ?? null,
+    evolutionInstance: resolvedEvolutionInstance ?? null,
   } satisfies AuthUser
 }
 

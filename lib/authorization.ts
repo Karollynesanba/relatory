@@ -1,6 +1,8 @@
 import type { Prisma, User } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { getSessionUser } from "@/lib/session-user"
 import { getBootstrapLoginAccount } from "@/lib/auth-accounts"
+import { resolveEvolutionInstanceForUser } from "@/lib/evolution-identity"
 import { logError, logInfo, logWarn } from "@/lib/safe-logger"
 
 type Role = "ADMIN" | "MANAGER"
@@ -91,7 +93,29 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     })
 
     if (user) {
-      return user as AuthenticatedUser
+      const resolvedEvolutionInstance =
+        user.evolutionInstance ?? resolveEvolutionInstanceForUser(user)
+
+      if (resolvedEvolutionInstance && resolvedEvolutionInstance !== user.evolutionInstance) {
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              evolutionInstance: resolvedEvolutionInstance,
+            },
+          })
+        } catch (error) {
+          logWarn("auth.current-user.sync-evolution-instance-failed", {
+            userId: user.id,
+            error: error instanceof Error ? error.message : "Erro desconhecido",
+          })
+        }
+      }
+
+      return {
+        ...(user as AuthenticatedUser),
+        evolutionInstance: resolvedEvolutionInstance ?? user.evolutionInstance,
+      }
     }
 
     const bootstrapAccount = getBootstrapLoginAccount(session.user.email)
@@ -110,7 +134,10 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
         passwordHash: "",
         metaAccessToken: null,
         metaTokenExpiresAt: null,
-        evolutionInstance: null,
+        evolutionInstance: resolveEvolutionInstanceForUser({
+          name: bootstrapAccount.name,
+          email: bootstrapAccount.email,
+        }),
       }
     }
 

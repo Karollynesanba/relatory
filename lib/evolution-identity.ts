@@ -52,3 +52,10 @@ export function resolveEvolutionInstanceFromIdentity(
 
   return null
 }
+
+export function resolveEvolutionInstanceForUser(user: {
+  name?: string | null
+  email?: string | null
+}) {
+  return resolveEvolutionInstanceFromIdentity(user.name, user.email)
+}
