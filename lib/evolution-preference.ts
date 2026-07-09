@@ -56,6 +56,12 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
   evolutionInstance?: string | null
   metaAccessToken?: string | null
 } | null) {
+  const explicitInstance = normalizeInstanceName(profile?.evolutionInstance)
+
+  if (explicitInstance) {
+    return explicitInstance
+  }
+
   const identityInstance = resolveEvolutionInstanceFromIdentity(
     profile?.name,
     profile?.email
@@ -70,12 +76,6 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
 
   if (presetInstance) {
     return presetInstance
-  }
-
-  const explicitInstance = normalizeInstanceName(profile?.evolutionInstance)
-
-  if (explicitInstance) {
-    return explicitInstance
   }
 
   return null
