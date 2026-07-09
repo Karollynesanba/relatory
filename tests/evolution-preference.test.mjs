@@ -42,7 +42,7 @@ test("resolveUserEvolutionInstance resolves Jeff to the exact Evolution instance
     metaAccessToken: null,
   })
 
-  assert.equal(instance, "Jefereson")
+  assert.equal(instance, "Jeferson")
 })
 
 test("resolveUserEvolutionInstance falls back to the Meta preset when no instance is saved", async () => {
@@ -62,9 +62,9 @@ test("resolveUserEvolutionInstance uses the explicit instance when identity is u
     id: "user-3",
     name: "Equipe Operacional",
     email: "operacional@greatgo.com",
-    evolutionInstance: "Jefereson",
+    evolutionInstance: "Jeferson",
     metaAccessToken: null,
   })
 
-  assert.equal(instance, "Jefereson")
+  assert.equal(instance, "Jeferson")
 })

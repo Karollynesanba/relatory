@@ -87,6 +87,59 @@ test("loadEvolutionCatalog returns groups from every open instance", async () =>
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog prefers the visible instance name over an internal instance identifier", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+  const internalInstanceId = "F5F29967679A-457D-85E6-56D28BD9BC61"
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          {
+            name: "Brayton - GreatGo",
+            status: "open",
+            instance: {
+              instanceName: internalInstanceId,
+              status: "open",
+            },
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes(`/group/fetchAllGroups/${encodeURIComponent("Brayton - GreatGo")}`)) {
+      return new Response(
+        JSON.stringify([
+          { id: "120@g.us", subject: "Grupo Brayton", size: 10, announce: false },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes(internalInstanceId)) {
+      throw new Error(`A busca nao deveria usar o identificador interno: ${url}`)
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({ groupInstances: ["Brayton - GreatGo"] })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].instance, "Brayton - GreatGo")
+  assert.equal(
+    requestedUrls.some((url) => url.includes(internalInstanceId)),
+    false
+  )
+
+  restoreEnvironment()
+})
+
 test("loadEvolutionCatalog stays connected when a requested instance returns groups", async () => {
   setEvolutionEnv()
 
