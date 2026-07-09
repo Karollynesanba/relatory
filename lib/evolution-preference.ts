@@ -56,12 +56,6 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
   evolutionInstance?: string | null
   metaAccessToken?: string | null
 } | null) {
-  const explicitInstance = normalizeInstanceName(profile?.evolutionInstance)
-
-  if (explicitInstance) {
-    return explicitInstance
-  }
-
   const identityInstance = resolveEvolutionInstanceFromIdentity(
     profile?.name,
     profile?.email
@@ -69,6 +63,12 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
 
   if (identityInstance) {
     return identityInstance
+  }
+
+  const explicitInstance = normalizeInstanceName(profile?.evolutionInstance)
+
+  if (explicitInstance) {
+    return explicitInstance
   }
 
   const preset = getMetaTokenPresetFromStoredToken(profile?.metaAccessToken ?? null)

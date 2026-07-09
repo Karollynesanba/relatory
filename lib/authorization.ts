@@ -93,8 +93,9 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     })
 
     if (user) {
+      const identityEvolutionInstance = resolveEvolutionInstanceForUser(user)
       const resolvedEvolutionInstance =
-        user.evolutionInstance ?? resolveEvolutionInstanceForUser(user)
+        identityEvolutionInstance ?? user.evolutionInstance
 
       if (resolvedEvolutionInstance && resolvedEvolutionInstance !== user.evolutionInstance) {
         try {

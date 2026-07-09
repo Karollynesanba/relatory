@@ -51,7 +51,7 @@ function buildAuthorizedUser(user: {
   evolutionInstance?: string | null
 }) {
   const resolvedEvolutionInstance =
-    user.evolutionInstance ?? resolveEvolutionInstanceForUser(user)
+    resolveEvolutionInstanceForUser(user) ?? user.evolutionInstance
 
   return {
     id: user.id,
