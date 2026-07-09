@@ -50,23 +50,6 @@ function mergeEvolutionGroupsById(
   return [...merged.values()]
 }
 
-function normalizeInstanceComparisonValue(value: string | null | undefined) {
-  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ")
-}
-
-function groupMatchesRequestedInstance(
-  group: EvolutionGroup,
-  requestedInstance: string | null | undefined
-) {
-  const normalizedRequestedInstance = normalizeInstanceComparisonValue(requestedInstance)
-
-  if (!normalizedRequestedInstance) {
-    return true
-  }
-
-  return normalizeInstanceComparisonValue(group.instance) === normalizedRequestedInstance
-}
-
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
@@ -156,10 +139,7 @@ export async function GET(request: Request) {
         participantPhone.length > 0
           ? mergeEvolutionGroupsById([participantCatalogGroups, catalog.groups])
           : catalog.groups
-      const scopedGroups = groups.filter((group) =>
-        groupMatchesRequestedInstance(group, resolvedGroupInstance)
-      )
-      groups = scopedGroups
+      const scopedGroups = groups
       let detail = ""
 
       if (participantPhone.length > 0 && scopedGroups.length === 0) {
