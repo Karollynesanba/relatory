@@ -203,6 +203,23 @@ function pickBestEvolutionInstanceName(
   }, null)
 }
 
+function buildEvolutionInstanceFetchCandidates(instance: string) {
+  const normalizedInstance = normalizeEvolutionInstanceName(instance)
+
+  if (!normalizedInstance) {
+    return []
+  }
+
+  const candidates = [normalizedInstance]
+  const separatorIndex = normalizedInstance.indexOf(" - ")
+
+  if (separatorIndex > 0) {
+    candidates.push(normalizedInstance.slice(0, separatorIndex).trim())
+  }
+
+  return dedupeStrings(candidates)
+}
+
 function normalizeEvolutionInstanceKey(
   value: string | undefined | null
 ) {
@@ -892,40 +909,51 @@ async function fetchEvolutionGroupsForInstance(
   instance: string,
   includeParticipants = false
 ) {
-  const encodedInstance = encodeURIComponent(instance)
-  const data = await fetchEvolutionJson<unknown>({
-    apiUrl: config.apiUrl,
-    apiKey: config.apiKey,
-    path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=${
-      includeParticipants ? "true" : "false"
-    }`,
-    timeoutMs: 45_000,
-  })
-  const groupsData = extractEvolutionGroupItems(data)
+  const candidates = buildEvolutionInstanceFetchCandidates(instance)
+  let lastError: Error | null = null
 
-  if (!groupsData) {
-    throw new Error("fetchAllGroups retornou resposta inválida")
+  for (const candidate of candidates) {
+    try {
+      const encodedInstance = encodeURIComponent(candidate)
+      const data = await fetchEvolutionJson<unknown>({
+        apiUrl: config.apiUrl,
+        apiKey: config.apiKey,
+        path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=${
+          includeParticipants ? "true" : "false"
+        }`,
+        timeoutMs: 45_000,
+      })
+      const groupsData = extractEvolutionGroupItems(data)
+
+      if (!groupsData) {
+        throw new Error("fetchAllGroups retornou resposta inválida")
+      }
+
+      const mergedGroups = mergeEvolutionGroups([
+        {
+          instance: candidate,
+          groups: groupsData.flatMap((group) => {
+            const mappedGroup = mapEvolutionGroupResponseItem(group, candidate)
+
+            return mappedGroup ? [mappedGroup] : []
+          }),
+        },
+      ])
+
+      if (mergedGroups.length > 0) {
+        return {
+          groups: mergedGroups,
+          partialErrors: [] as string[],
+        }
+      }
+
+      lastError = new Error("Nenhum grupo foi retornado pela Evolution API")
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
   }
 
-  const mergedGroups = mergeEvolutionGroups([
-    {
-      instance,
-      groups: groupsData.flatMap((group) => {
-        const mappedGroup = mapEvolutionGroupResponseItem(group, instance)
-
-        return mappedGroup ? [mappedGroup] : []
-      }),
-    },
-  ])
-
-  if (mergedGroups.length === 0) {
-    throw new Error("Nenhum grupo foi retornado pela Evolution API")
-  }
-
-  return {
-    groups: mergedGroups,
-    partialErrors: [] as string[],
-  }
+  throw lastError ?? new Error("Nenhum grupo foi retornado pela Evolution API")
 }
 
 async function restartEvolutionInstance(

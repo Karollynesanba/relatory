@@ -140,6 +140,65 @@ test("loadEvolutionCatalog prefers the visible instance name over an internal in
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog falls back to the short instance name when the visible label returns no groups", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          {
+            name: "Brayton - GreatGo",
+            status: "open",
+            instance: {
+              instanceName: "Brayton",
+              status: "open",
+            },
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/Brayton%20-%20GreatGo")) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    if (url.includes("/group/fetchAllGroups/Brayton")) {
+      return new Response(
+        JSON.stringify([
+          { id: "120@g.us", subject: "Grupo Brayton", size: 10, announce: false },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({ groupInstances: ["Brayton - GreatGo"] })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].instance, "Brayton")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("/group/fetchAllGroups/Brayton%20-%20GreatGo")),
+    true
+  )
+  assert.equal(
+    requestedUrls.some((url) => url.includes("/group/fetchAllGroups/Brayton")),
+    true
+  )
+
+  restoreEnvironment()
+})
+
 test("loadEvolutionCatalog prefers the visible instance name over a short alias", async () => {
   setEvolutionEnv()
   const requestedUrls = []
