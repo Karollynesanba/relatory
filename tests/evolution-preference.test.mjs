@@ -68,3 +68,15 @@ test("resolveUserEvolutionInstance uses the explicit instance when identity is u
 
   assert.equal(instance, "Jeferson")
 })
+
+test("resolveUserEvolutionInstance resolves Isaque from the full visible profile name", async () => {
+  const instance = await resolveUserEvolutionInstance({
+    id: "user-4",
+    name: "Isaque Soares | ASSESSORIA GREAT",
+    email: "contato@empresa.com.br",
+    evolutionInstance: "GreatGo",
+    metaAccessToken: null,
+  })
+
+  assert.equal(instance, "Isaque - GreatGo")
+})
