@@ -147,6 +147,62 @@ function normalizeEvolutionInstanceName(
   return typeof value === "string" ? value.trim() : ""
 }
 
+function scoreEvolutionInstanceName(value: string | undefined | null) {
+  const name = normalizeEvolutionInstanceName(value)
+
+  if (!name) {
+    return -1
+  }
+
+  const compact = name.replace(/\s+/g, "")
+  const wordCount = name.split(/\s+/).filter(Boolean).length
+  const hasReadableSeparators = /[\s\-|/]/.test(name)
+  const looksOpaqueIdentifier =
+    compact.length >= 16 &&
+    /^[a-z0-9-]+$/i.test(compact) &&
+    /[a-f0-9]{8,}/i.test(compact) &&
+    !hasReadableSeparators
+
+  let score = 0
+
+  if (!looksOpaqueIdentifier) {
+    score += 20
+  }
+
+  if (hasReadableSeparators) {
+    score += 15
+  }
+
+  score += Math.min(wordCount * 5, 20)
+
+  if (name.length <= 8 && wordCount <= 1) {
+    score -= 10
+  }
+
+  return score
+}
+
+function pickBestEvolutionInstanceName(
+  ...candidates: Array<string | undefined | null>
+) {
+  return candidates.reduce<string | null>((best, candidate) => {
+    const normalizedCandidate = normalizeEvolutionInstanceName(candidate)
+
+    if (!normalizedCandidate) {
+      return best
+    }
+
+    if (!best) {
+      return normalizedCandidate
+    }
+
+    return scoreEvolutionInstanceName(normalizedCandidate) >
+      scoreEvolutionInstanceName(best)
+      ? normalizedCandidate
+      : best
+  }, null)
+}
+
 function normalizeEvolutionInstanceKey(
   value: string | undefined | null
 ) {
@@ -223,8 +279,10 @@ function readEvolutionInstanceCandidate(
     typeof value.instance === "object" && value.instance !== null
       ? value.instance
       : null
-  const name = normalizeEvolutionInstanceName(
-    value.name ?? value.instanceName ?? instancePayload?.instanceName
+  const name = pickBestEvolutionInstanceName(
+    value.name,
+    value.instanceName,
+    instancePayload?.instanceName
   )
 
   if (!name) {
