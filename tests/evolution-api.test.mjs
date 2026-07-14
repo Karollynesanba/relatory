@@ -199,6 +199,65 @@ test("loadEvolutionCatalog falls back to the short instance name when the visibl
   restoreEnvironment()
 })
 
+test("loadEvolutionCatalog retries without participants when the participant query returns no groups", async () => {
+  setEvolutionEnv()
+  const requestedUrls = []
+
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    requestedUrls.push(url)
+
+    if (url.endsWith("/instance/fetchInstances")) {
+      return new Response(
+        JSON.stringify([
+          {
+            name: "Isaque - GreatGo",
+            status: "open",
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (url.includes("/group/fetchAllGroups/Isaque%20-%20GreatGo")) {
+      if (url.includes("getParticipants=true")) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
+      return new Response(
+        JSON.stringify([
+          { id: "120@g.us", subject: "Grupo Isaque", size: 10, announce: false },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    throw new Error(`URL nao esperada no teste: ${url}`)
+  }
+
+  const catalog = await loadEvolutionCatalog({
+    groupInstances: ["Isaque - GreatGo"],
+    includeParticipants: true,
+    allowParticipantFallback: true,
+  })
+
+  assert.equal(catalog.groups.length, 1)
+  assert.equal(catalog.groups[0].subject, "Grupo Isaque")
+  assert.equal(
+    requestedUrls.some((url) => url.includes("getParticipants=true")),
+    true
+  )
+  assert.equal(
+    requestedUrls.some((url) => url.includes("getParticipants=false")),
+    true
+  )
+
+  restoreEnvironment()
+})
+
 test("loadEvolutionCatalog prefers the visible instance name over a short alias", async () => {
   setEvolutionEnv()
   const requestedUrls = []

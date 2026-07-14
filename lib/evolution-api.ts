@@ -51,6 +51,7 @@ type EvolutionCatalogOptions = {
   groupInstances?: string[]
   participantPhone?: string | null
   includeParticipants?: boolean
+  allowParticipantFallback?: boolean
 }
 
 function getRequiredEnv(name: "EVOLUTION_API_URL" | "EVOLUTION_API_KEY" | "EVOLUTION_INSTANCE") {
@@ -235,6 +236,36 @@ function normalizeEvolutionInstanceKey(
     .join(" ")
 }
 
+function normalizeEvolutionInstanceSearchText(
+  value: string | undefined | null
+) {
+  return normalizeEvolutionInstanceName(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+}
+
+function hasEvolutionInstanceTextMatch(
+  requestedInstance: string | undefined | null,
+  candidateInstance: string | undefined | null
+) {
+  const requestedText = normalizeEvolutionInstanceSearchText(requestedInstance)
+  const candidateText = normalizeEvolutionInstanceSearchText(candidateInstance)
+
+  if (!requestedText || !candidateText) {
+    return false
+  }
+
+  return (
+    requestedText === candidateText ||
+    requestedText.includes(candidateText) ||
+    candidateText.includes(requestedText)
+  )
+}
+
 function resolveEvolutionInstanceAlias(
   requestedInstance: string | undefined | null,
   instances: EvolutionInstance[]
@@ -249,7 +280,15 @@ function resolveEvolutionInstanceAlias(
     (instance) => normalizeEvolutionInstanceKey(instance.name) === requestedKey
   )
 
-  return matchingInstance?.name ?? normalizeEvolutionInstanceName(requestedInstance)
+  if (matchingInstance) {
+    return matchingInstance.name
+  }
+
+  const textMatchedInstance = instances.find((instance) =>
+    hasEvolutionInstanceTextMatch(requestedInstance, instance.name)
+  )
+
+  return textMatchedInstance?.name ?? normalizeEvolutionInstanceName(requestedInstance)
 }
 
 export function findEvolutionInstanceMatch(
@@ -265,7 +304,11 @@ export function findEvolutionInstanceMatch(
   return (
     instances.find(
       (instance) => normalizeEvolutionInstanceKey(instance.name) === requestedKey
-    ) ?? null
+    ) ??
+    instances.find((instance) =>
+      hasEvolutionInstanceTextMatch(requestedInstance, instance.name)
+    ) ??
+    null
   )
 }
 
@@ -907,43 +950,62 @@ function extractEvolutionGroupItems(data: unknown): EvolutionGroupResponseItem[]
 async function fetchEvolutionGroupsForInstance(
   config: EvolutionConfig,
   instance: string,
-  includeParticipants = false
+  includeParticipants = false,
+  allowParticipantFallback = true
 ) {
   const candidates = buildEvolutionInstanceFetchCandidates(instance)
   let lastError: Error | null = null
 
+  async function fetchGroupsFromCandidate(
+    candidate: string,
+    participants: boolean
+  ) {
+    const encodedInstance = encodeURIComponent(candidate)
+    const data = await fetchEvolutionJson<unknown>({
+      apiUrl: config.apiUrl,
+      apiKey: config.apiKey,
+      path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=${
+        participants ? "true" : "false"
+      }`,
+      timeoutMs: 45_000,
+    })
+    const groupsData = extractEvolutionGroupItems(data)
+
+    if (!groupsData) {
+      throw new Error("fetchAllGroups retornou resposta inválida")
+    }
+
+    return mergeEvolutionGroups([
+      {
+        instance: candidate,
+        groups: groupsData.flatMap((group) => {
+          const mappedGroup = mapEvolutionGroupResponseItem(group, candidate)
+
+          return mappedGroup ? [mappedGroup] : []
+        }),
+      },
+    ])
+  }
+
   for (const candidate of candidates) {
     try {
-      const encodedInstance = encodeURIComponent(candidate)
-      const data = await fetchEvolutionJson<unknown>({
-        apiUrl: config.apiUrl,
-        apiKey: config.apiKey,
-        path: `/group/fetchAllGroups/${encodedInstance}?getParticipants=${
-          includeParticipants ? "true" : "false"
-        }`,
-        timeoutMs: 45_000,
-      })
-      const groupsData = extractEvolutionGroupItems(data)
-
-      if (!groupsData) {
-        throw new Error("fetchAllGroups retornou resposta inválida")
-      }
-
-      const mergedGroups = mergeEvolutionGroups([
-        {
-          instance: candidate,
-          groups: groupsData.flatMap((group) => {
-            const mappedGroup = mapEvolutionGroupResponseItem(group, candidate)
-
-            return mappedGroup ? [mappedGroup] : []
-          }),
-        },
-      ])
+      const mergedGroups = await fetchGroupsFromCandidate(candidate, includeParticipants)
 
       if (mergedGroups.length > 0) {
         return {
           groups: mergedGroups,
           partialErrors: [] as string[],
+        }
+      }
+
+      if (includeParticipants && allowParticipantFallback) {
+        const fallbackGroups = await fetchGroupsFromCandidate(candidate, false)
+
+        if (fallbackGroups.length > 0) {
+          return {
+            groups: fallbackGroups,
+            partialErrors: [] as string[],
+          }
         }
       }
 
@@ -1009,6 +1071,8 @@ export async function loadEvolutionCatalog(
   )
   const participantPhoneDigits = normalizePhoneDigits(options?.participantPhone)
   const includeParticipants = options?.includeParticipants ?? Boolean(participantPhoneDigits)
+  const allowParticipantFallback =
+    options?.allowParticipantFallback ?? !participantPhoneDigits
   async function fetchGroupsForTargets(instanceTargets: string[]) {
     const groupResults = await Promise.allSettled(
       instanceTargets.map(async (instance) => ({
@@ -1016,7 +1080,8 @@ export async function loadEvolutionCatalog(
         groups: await fetchEvolutionGroupsForInstance(
           config,
           instance,
-          includeParticipants
+          includeParticipants,
+          allowParticipantFallback
         ),
       }))
     )
