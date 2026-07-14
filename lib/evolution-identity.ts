@@ -10,6 +10,7 @@ const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
       "braytonmaycon5@gmail.com",
       "brayton maycon",
       "brayton may",
+      "brayton - greatgo",
       "brayton maycon | assessoria great",
       "brayton maycon assessoria great",
       "brayton maycon greatgo",
@@ -21,6 +22,7 @@ const EVOLUTION_IDENTITY_RULES: EvolutionIdentityRule[] = [
     aliases: [
       "isaque@greatgo.com",
       "isaque soares",
+      "isaque - greatgo",
       "isaque soares | assessoria great",
       "isaque soares assessoria great",
       "isaque greatgo",
@@ -82,4 +84,19 @@ export function resolveEvolutionInstanceForUser(user: {
   email?: string | null
 }) {
   return resolveEvolutionInstanceFromIdentity(user.name, user.email)
+}
+
+export function resolveComparableEvolutionInstance(value: unknown) {
+  if (typeof value !== "string") {
+    return ""
+  }
+
+  return resolveEvolutionInstanceFromIdentity(value, null) ?? normalizeIdentityText(value)
+}
+
+export function areEquivalentEvolutionInstances(
+  left: unknown,
+  right: unknown
+) {
+  return resolveComparableEvolutionInstance(left) === resolveComparableEvolutionInstance(right)
 }

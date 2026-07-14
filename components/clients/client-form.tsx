@@ -9,7 +9,10 @@ import {
 import { useSession } from "next-auth/react"
 import { Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { fetchJsonOrThrow } from "@/lib/api-client"
-import { resolveEvolutionInstanceFromIdentity } from "@/lib/evolution-identity"
+import {
+  areEquivalentEvolutionInstances,
+  resolveEvolutionInstanceFromIdentity,
+} from "@/lib/evolution-identity"
 import {
   EvolutionGroupCombobox,
   buildEvolutionGroupValue,
@@ -100,10 +103,8 @@ export function ClientForm({
       return groups
     }
 
-    const normalizedPreferredInstance = preferredInstance.trim().toLowerCase()
-
     return groups.filter(
-      (group) => group.instance.trim().toLowerCase() === normalizedPreferredInstance
+      (group) => areEquivalentEvolutionInstances(group.instance, preferredInstance)
     )
   }, [groupsResponse?.groups, preferredInstance])
   const manualGroupValue = normalizeEvolutionGroupId(values.whatsappGroupId)

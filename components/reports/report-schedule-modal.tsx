@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Calendar, Clock3, Loader2, RefreshCw, Repeat, Users, X } from "lucide-react"
-import { resolveEvolutionInstanceFromIdentity } from "@/lib/evolution-identity"
+import {
+  areEquivalentEvolutionInstances,
+  resolveEvolutionInstanceFromIdentity,
+} from "@/lib/evolution-identity"
 import {
   EvolutionGroupCombobox,
   normalizeEvolutionGroupId,
@@ -211,10 +214,8 @@ export function ReportScheduleModal(props: ReportScheduleModalProps) {
       return groups
     }
 
-    const normalizedPreferredInstance = preferredInstance.trim().toLowerCase()
-
     return groups.filter(
-      (group) => group.instance.trim().toLowerCase() === normalizedPreferredInstance
+      (group) => areEquivalentEvolutionInstances(group.instance, preferredInstance)
     )
   }, [groupsResponse?.groups, preferredInstance])
   const manualGroupValue = normalizeEvolutionGroupId(form.groupId)

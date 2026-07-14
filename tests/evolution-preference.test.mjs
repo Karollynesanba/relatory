@@ -3,6 +3,9 @@ import {
   getEvolutionInstanceForMetaPreset,
   resolveUserEvolutionInstance,
 } from "@/lib/evolution-preference"
+import {
+  areEquivalentEvolutionInstances,
+} from "@/lib/evolution-identity"
 
 test("getEvolutionInstanceForMetaPreset maps presets to their matching instance", async () => {
   assert.equal(getEvolutionInstanceForMetaPreset("ISAQUE"), "Isaque - GreatGo")
@@ -79,4 +82,19 @@ test("resolveUserEvolutionInstance resolves Isaque from the full visible profile
   })
 
   assert.equal(instance, "Isaque - GreatGo")
+})
+
+test("areEquivalentEvolutionInstances treats the Isaque label and alias as the same instance", async () => {
+  assert.equal(
+    areEquivalentEvolutionInstances("Isaque - GreatGo", "Isaque"),
+    true
+  )
+  assert.equal(
+    areEquivalentEvolutionInstances("Isaque - GreatGo", "Isaque - GreatGo"),
+    true
+  )
+  assert.equal(
+    areEquivalentEvolutionInstances("Isaque - GreatGo", "Carlos"),
+    false
+  )
 })
