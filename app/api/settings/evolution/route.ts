@@ -68,7 +68,7 @@ export async function GET(request: Request) {
       requestUrl.searchParams.get("previewInstance")
     )
     const selectedInstance =
-      (await resolveUserEvolutionInstance(user)) ??
+      (await resolveUserEvolutionInstance(user.id)) ??
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
     const config = getEvolutionConfig()
     const effectiveGroupInstance = previewInstance || selectedInstance || null

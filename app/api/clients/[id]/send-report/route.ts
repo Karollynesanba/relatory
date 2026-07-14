@@ -88,7 +88,7 @@ export async function POST(
         objective,
       },
     })
-    const evolutionInstance = await resolveUserEvolutionInstance(user)
+    const evolutionInstance = await resolveUserEvolutionInstance(user.id)
     const savedReport = await persistGeneratedReport({
       clientId,
       payload,

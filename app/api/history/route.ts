@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "NÃ£o autorizado" }, { status: 401 })
     }
-    const userEvolutionInstance = await resolveUserEvolutionInstance(user)
+    const userEvolutionInstance = await resolveUserEvolutionInstance(user.id)
 
     after(() => {
       void runDueReportScheduleSweep({

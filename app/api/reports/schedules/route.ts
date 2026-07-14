@@ -195,7 +195,7 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
-    const userEvolutionInstance = await resolveUserEvolutionInstance(user)
+    const userEvolutionInstance = await resolveUserEvolutionInstance(user.id)
 
     const clients = await prisma.client.findMany({
       where: scopeSharedReportClientWhere(user, {

@@ -59,26 +59,33 @@ export async function findUserForSession<T extends Prisma.UserSelect>(params: {
       ? normalizeEmail(sessionUser.email)
       : ""
 
-  if (sessionUserEmail) {
-    const userByEmail = await findUserByNormalizedEmail(sessionUserEmail, params.select)
+  if (sessionUserId) {
+    try {
+      const userById = await prisma.user.findUnique({
+        where: { id: sessionUserId },
+        select: params.select,
+      })
 
-    if (userByEmail) {
-      return userByEmail
+      if (userById) {
+        return userById
+      }
+    } catch (error) {
+      logWarn("session-user.lookup-by-id-failed", {
+        userId: sessionUserId,
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      })
     }
   }
 
-  if (!sessionUserId) {
+  if (!sessionUserEmail) {
     return null
   }
 
   try {
-    return await prisma.user.findUnique({
-      where: { id: sessionUserId },
-      select: params.select,
-    })
+    return await findUserByNormalizedEmail(sessionUserEmail, params.select)
   } catch (error) {
-    logWarn("session-user.lookup-by-id-failed", {
-      userId: sessionUserId,
+    logWarn("session-user.lookup-by-email-failed", {
+      email: sessionUserEmail,
       error: error instanceof Error ? error.message : "Erro desconhecido",
     })
     return null

@@ -91,7 +91,7 @@ export async function POST(
       body.groupId?.trim() ||
       report.client.reportSchedule?.groupId?.trim() ||
       report.client.whatsappGroupId?.trim()
-    const evolutionInstance = await resolveUserEvolutionInstance(user)
+    const evolutionInstance = await resolveUserEvolutionInstance(user.id)
 
     if (!targetGroupId) {
       return NextResponse.json(

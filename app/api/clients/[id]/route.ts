@@ -50,7 +50,7 @@ async function assertClientGroupBelongsToUserInstance(
     return
   }
 
-  const userInstance = await resolveUserEvolutionInstance(user)
+  const userInstance = await resolveUserEvolutionInstance(user.id)
 
   if (!userInstance) {
     throw new Error(
