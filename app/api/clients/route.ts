@@ -67,6 +67,9 @@ async function assertClientGroupBelongsToUserInstance(
   }
 
   const catalog = await loadEvolutionCatalog({ groupInstances: [userInstance] })
+  if (catalog.groups.length === 0) {
+    return
+  }
   const matchesUserInstance = catalog.groups.some(
     (group) => group.id === target.groupId
   )
