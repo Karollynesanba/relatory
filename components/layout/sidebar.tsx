@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
   { label: "Clientes", href: "/dashboard/clients", icon: Users },
-  { label: "Relatórios", href: "/dashboard/reports", icon: FileText },
+  { label: "Relatório", href: "/dashboard/reports/new", icon: FileText },
   { label: "Histórico", href: "/dashboard/history", icon: History },
   { label: "Integrações", href: "/dashboard/settings", icon: Settings },
 ]
