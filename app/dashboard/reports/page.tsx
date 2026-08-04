@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Calendar,
   ChevronLeft,
@@ -106,8 +107,11 @@ function isActiveCampaign(campaign: { status?: string | null }) {
 }
 
 export default function ReportsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const reportPollSequenceRef = useRef(0)
   const autoLoadedReportKeyRef = useRef("")
+  const appliedFreshRouteRef = useRef(false)
   const [clients, setClients] = useState<ClientListItem[]>([])
   const [loadingClients, setLoadingClients] = useState(true)
   const [search, setSearch] = useState("")
@@ -265,6 +269,20 @@ export default function ReportsPage() {
     clearCurrentReport()
     resetCustomization()
   }, [clearCurrentReport, resetCustomization])
+
+  useEffect(() => {
+    if (appliedFreshRouteRef.current) {
+      return
+    }
+
+    if (searchParams.get("fresh") !== "1") {
+      return
+    }
+
+    appliedFreshRouteRef.current = true
+    resetWorkspace()
+    router.replace("/dashboard/reports")
+  }, [resetWorkspace, router, searchParams])
 
   useEffect(() => {
     if (!selectedClient) {

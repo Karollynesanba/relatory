@@ -82,7 +82,32 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
 
     if (!session?.user?.email) {
       logWarn("auth.current-user.no-session")
-      return null
+      const fallbackUser = await prisma.user.findFirst({
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          passwordHash: true,
+          metaAccessToken: true,
+          metaTokenExpiresAt: true,
+          evolutionInstance: true,
+        },
+      })
+
+      if (!fallbackUser) {
+        return null
+      }
+
+      const identityEvolutionInstance = resolveEvolutionInstanceForUser(fallbackUser)
+      const resolvedEvolutionInstance =
+        identityEvolutionInstance ?? fallbackUser.evolutionInstance
+
+      return {
+        ...fallbackUser,
+        evolutionInstance: resolvedEvolutionInstance ?? fallbackUser.evolutionInstance,
+      }
     }
 
     logInfo("auth.current-user.loaded", {

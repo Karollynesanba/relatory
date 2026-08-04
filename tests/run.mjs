@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises"
 
-process.env.DATABASE_URL ??= "postgresql://test:test@localhost:5432/greatgo_test"
+process.env.DATABASE_URL ??= "file:./dev.db"
 process.env.DIRECT_URL ??= process.env.DATABASE_URL
 
 const testFiles = (await readdir(new URL(".", import.meta.url), {
@@ -17,3 +17,5 @@ for (const testFile of testFiles) {
 const { runRegisteredTests } = await import("./test-helpers.mjs")
 
 await runRegisteredTests()
+
+

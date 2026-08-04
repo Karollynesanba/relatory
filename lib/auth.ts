@@ -27,10 +27,7 @@ function normalizeEmail(email: string) {
 async function findUserByNormalizedEmail(email: string) {
   return prisma.user.findFirst({
     where: {
-      email: {
-        equals: normalizeEmail(email),
-        mode: "insensitive",
-      },
+      email: normalizeEmail(email),
     },
     select: {
       id: true,
