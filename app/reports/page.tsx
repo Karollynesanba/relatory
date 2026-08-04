@@ -59,7 +59,7 @@ export default function ReportsLandingPage() {
           </div>
 
           <Link
-            href="/dashboard/reports/new"
+            href="/dashboard/reports?fresh=1"
             className="inline-flex items-center justify-center rounded-full bg-[#111c3a] px-6 py-3.5 text-base font-semibold text-white shadow-[0_16px_40px_-18px_rgba(17,28,58,0.65)] transition hover:bg-[#0c1630]"
           >
             Novo relatório

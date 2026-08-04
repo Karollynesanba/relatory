@@ -51,6 +51,7 @@ import type {
   ReportSendMode,
   ReportTemplateDraft,
   SavedReportResponse,
+  StoredReportPayload,
 } from "@/types/report.types"
 
 const colors = [
@@ -87,6 +88,110 @@ const DEFAULT_REPORT_METRICS: ReportMetricVisibility = {
   conversationsStarted: true,
   costPerConversation: true,
   conversationRate: true,
+}
+
+const DEMO_REPORT_ID = "demo-report"
+const DEMO_CLIENT_ID = "demo-client"
+const DEMO_START_DATE = "2026-07-09"
+const DEMO_END_DATE = "2026-07-19"
+const DEMO_OBJECTIVE: ReportObjectiveValue = "CONVERSIONS"
+
+const DEMO_CLIENT: ClientListItem = {
+  id: DEMO_CLIENT_ID,
+  name: "Patricia Great",
+  company: "FACEBOOK",
+  email: "patricia@example.com",
+  phone: null,
+  whatsappGroupId: null,
+  status: "ACTIVE",
+  createdAt: "2026-07-20T00:00:00.000Z",
+  adAccountId: "act_123",
+  campaigns: [{ id: "demo-campaign-1" }],
+}
+
+const DEMO_REPORT_PAYLOAD: StoredReportPayload = {
+  client: {
+    id: DEMO_CLIENT_ID,
+    name: "Patricia Great",
+    company: "FACEBOOK",
+    email: "patricia@example.com",
+    adAccountId: "act_123",
+  },
+  filters: {
+    since: DEMO_START_DATE,
+    until: DEMO_END_DATE,
+    objective: DEMO_OBJECTIVE,
+    generatedAt: "2026-07-20T00:00:00.000Z",
+  },
+  campaigns: [
+    {
+      id: "demo-campaign-1",
+      name: "Campanha 1",
+      status: "ACTIVE",
+      objective: "LEADS",
+      insights: {
+        data: [
+          {
+            date_start: DEMO_START_DATE,
+            spend: "0",
+            impressions: "0",
+            reach: "0",
+            clicks: "0",
+            ctr: "0",
+            cpc: "0",
+            cpm: "0",
+            actions: [],
+            action_values: [],
+          },
+        ],
+      },
+    },
+  ],
+  accountInsights: {
+    spend: "0",
+    impressions: "0",
+    reach: "0",
+    clicks: "0",
+    ctr: "0",
+    cpc: "0",
+    cpm: "0",
+    actions: [],
+    action_values: [],
+  },
+  dailyInsights: [
+    {
+      date_start: DEMO_START_DATE,
+      spend: "0",
+      impressions: "0",
+      reach: "0",
+      clicks: "0",
+      ctr: "0",
+      cpc: "0",
+      cpm: "0",
+      actions: [],
+      action_values: [],
+    },
+  ],
+  topAds: [
+    {
+      id: "demo-ad-1",
+      name: "Anúncio 1",
+      spend: "0",
+      impressions: "0",
+      reach: "0",
+      clicks: "0",
+      actions: [],
+    },
+  ],
+  genderBreakdown: [],
+  presentation: {
+    customTitle: "FACEBOOK - Visão Geral",
+    executiveSummary: "",
+    closingNotes: "",
+    sections: DEFAULT_REPORT_SECTIONS,
+    metrics: DEFAULT_REPORT_METRICS,
+    insightsEnabled: true,
+  },
 }
 
 function getColor(name: string) {
@@ -270,6 +375,45 @@ export default function ReportsPage() {
     resetCustomization()
   }, [clearCurrentReport, resetCustomization])
 
+  const openDemoReport = useCallback(() => {
+    const reportKey = `${DEMO_CLIENT_ID}:${DEMO_START_DATE}:${DEMO_END_DATE}:${DEMO_OBJECTIVE}`
+
+    reportPollSequenceRef.current += 1
+    autoLoadedReportKeyRef.current = reportKey
+    setSelectedClient(DEMO_CLIENT)
+    setSelectedClientIds([])
+    setSelectedCampaigns(["demo-campaign-1"])
+    setSearch("")
+    setActiveListTab("clients")
+    setActivePeriod("custom")
+    setStartDate(DEMO_START_DATE)
+    setEndDate(DEMO_END_DATE)
+    setObjective(DEMO_OBJECTIVE)
+    setScheduleModalOpen(false)
+    setBulkScheduleModalOpen(false)
+    setLoadingReport(false)
+    setLoadingReportMessage("")
+    setReportError("")
+    setActionFeedback("")
+    setCurrentReportId(DEMO_REPORT_ID)
+    setReportData(DEMO_REPORT_PAYLOAD)
+    setInsightsEnabled(true)
+    setSendMode("PDF_AND_MESSAGE")
+    setSendMessage(
+      buildReportSendPreview({
+        reportId: DEMO_REPORT_ID,
+        payload: DEMO_REPORT_PAYLOAD,
+      })
+    )
+    setTemplateName(DEFAULT_TEMPLATE_NAME)
+    setCustomTitle("FACEBOOK - Visão Geral")
+    setExecutiveSummary("")
+    setClosingNotes("")
+    setSectionVisibility(DEFAULT_REPORT_SECTIONS)
+    setMetricVisibility(DEFAULT_REPORT_METRICS)
+    setSavedTemplateLabel(null)
+  }, [])
+
   useEffect(() => {
     if (appliedFreshRouteRef.current) {
       return
@@ -279,10 +423,15 @@ export default function ReportsPage() {
       return
     }
 
+    if (loadingClients) {
+      return
+    }
+
     appliedFreshRouteRef.current = true
     resetWorkspace()
+    openDemoReport()
     router.replace("/dashboard/reports")
-  }, [resetWorkspace, router, searchParams])
+  }, [loadingClients, openDemoReport, resetWorkspace, router, searchParams])
 
   useEffect(() => {
     if (!selectedClient) {
