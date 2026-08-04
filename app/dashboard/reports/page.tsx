@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -211,7 +212,7 @@ function isActiveCampaign(campaign: { status?: string | null }) {
   return campaign.status === "ACTIVE"
 }
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const reportPollSequenceRef = useRef(0)
@@ -1335,6 +1336,14 @@ export default function ReportsPage() {
         }}
       />
     </>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#eef1f6]" />}>
+      <ReportsPageContent />
+    </Suspense>
   )
 }
 
