@@ -493,6 +493,46 @@ function buildWhatsAppDraftMessage(draft: ReportDraft) {
   ].join("\n")
 }
 
+async function renderPagesForPdf<T>(
+  previewRoot: HTMLDivElement,
+  render: (pages: HTMLElement[]) => Promise<T>
+) {
+  const sourcePages = Array.from(
+    previewRoot.querySelectorAll<HTMLElement>("[data-preview-page]")
+  )
+
+  if (sourcePages.length === 0) {
+    throw new Error("Nenhuma página encontrada na prévia.")
+  }
+
+  const sandbox = document.createElement("div")
+  sandbox.setAttribute("data-pdf-sandbox", "true")
+  sandbox.style.position = "fixed"
+  sandbox.style.left = "-20000px"
+  sandbox.style.top = "0"
+  sandbox.style.width = `${PAGE_WIDTH}px`
+  sandbox.style.pointerEvents = "none"
+  sandbox.style.opacity = "1"
+  sandbox.style.zIndex = "-1"
+  sandbox.style.background = "#f4f7fb"
+
+  const clonedPages = sourcePages.map((page) => {
+    const clone = page.cloneNode(true) as HTMLElement
+    clone.style.transform = "none"
+    clone.style.margin = "0 0 32px 0"
+    sandbox.appendChild(clone)
+    return clone
+  })
+
+  document.body.appendChild(sandbox)
+
+  try {
+    return await render(clonedPages)
+  } finally {
+    sandbox.remove()
+  }
+}
+
 function PreviewPageShell({
   pageNumber,
   totalPages,
@@ -1215,34 +1255,46 @@ export default function ReportBuilderPage() {
       import("jspdf"),
     ])
 
-    const pages = Array.from(
-      previewRef.current.querySelectorAll<HTMLElement>("[data-preview-page]")
-    )
-
-    if (pages.length === 0) {
-      throw new Error("Nenhuma página encontrada na prévia.")
-    }
-
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
 
-    for (let index = 0; index < pages.length; index += 1) {
-      const page = pages[index]
-      const canvas = await html2canvas(page, {
-        scale: 2,
-        backgroundColor: "#f4f7fb",
-        useCORS: true,
-      })
-      const imgData = canvas.toDataURL("image/jpeg", 0.98)
-      const imgHeight = (canvas.height * pageWidth) / canvas.width
+    await renderPagesForPdf(previewRef.current, async (pages) => {
+      for (let index = 0; index < pages.length; index += 1) {
+        const page = pages[index]
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          backgroundColor: "#f4f7fb",
+          useCORS: true,
+        })
 
-      if (index > 0) {
-        pdf.addPage()
+        if (canvas.width <= 0 || canvas.height <= 0) {
+          throw new Error(
+            "A prévia do relatório não pôde ser renderizada para o PDF."
+          )
+        }
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.98)
+        const imgHeight = (canvas.height * pageWidth) / canvas.width
+
+        if (!Number.isFinite(imgHeight) || imgHeight <= 0) {
+          throw new Error("O PDF gerado ficou com dimensões inválidas.")
+        }
+
+        if (index > 0) {
+          pdf.addPage()
+        }
+
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          0,
+          0,
+          pageWidth,
+          Math.min(pageHeight, imgHeight)
+        )
       }
-
-      pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, Math.min(pageHeight, imgHeight))
-    }
+    })
 
     const fields = fieldValueMap(draft.generalFields)
     const fileName = `${buildReportPdfFileName({
