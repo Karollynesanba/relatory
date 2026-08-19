@@ -1350,7 +1350,7 @@ export default function ReportBuilderPage() {
       setIsSendingWhatsApp(true)
 
       try {
-        const { pdf, fileName, pdfFile, message } = await buildPdfDocument()
+        const { pdf, fileName, pdfFile } = await buildPdfDocument()
 
         if (
           typeof navigator !== "undefined" &&
@@ -1359,8 +1359,6 @@ export default function ReportBuilderPage() {
           navigator.canShare({ files: [pdfFile] })
         ) {
           await navigator.share({
-            title: buildPreviewTitle(draft),
-            text: message,
             files: [pdfFile],
           })
 
