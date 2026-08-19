@@ -11,6 +11,7 @@ import {
   Copy,
   Download,
   FileText,
+  MessageCircle,
   Minus,
   Plus,
   RefreshCw,
@@ -452,6 +453,44 @@ function buildPreviewTitle(draft: ReportDraft) {
 function buildPreviewPeriod(draft: ReportDraft) {
   const fields = fieldValueMap(draft.generalFields)
   return `Período: ${formatDisplayDate(fields["start-date"])} a ${formatDisplayDate(fields["end-date"])}`
+}
+
+function buildWhatsAppDraftMessage(draft: ReportDraft) {
+  const fields = fieldValueMap(draft.generalFields)
+  const clientName = fields["client-name"] || "Cliente"
+  const reportTitle = buildPreviewTitle(draft)
+  const period = buildPreviewPeriod(draft)
+  const objective = fields.objective || "-"
+  const visibleMainMetrics = draft.mainMetrics.filter((metric) => !metric.hidden).slice(0, 4)
+  const visibleCampaigns = draft.campaigns.filter((campaign) => !campaign.hidden).slice(0, 3)
+
+  const metricsBlock = visibleMainMetrics.length
+    ? visibleMainMetrics
+        .map((metric) => `- ${metric.label}: ${metric.value}`)
+        .join("\n")
+    : "- Nenhuma métrica principal visível"
+
+  const campaignsBlock = visibleCampaigns.length
+    ? visibleCampaigns
+        .map(
+          (campaign) =>
+            `- ${campaign.name}: ${campaign.status}, Leads ${campaign.leads}, Cliques ${campaign.clicks}, Gasto ${campaign.spend}`
+        )
+        .join("\n")
+    : "- Nenhuma campanha visível"
+
+  return [
+    `*${reportTitle}*`,
+    `Cliente: ${clientName}`,
+    period,
+    `Objetivo: ${objective}`,
+    "",
+    "*Principais métricas*",
+    metricsBlock,
+    "",
+    "*Campanhas em destaque*",
+    campaignsBlock,
+  ].join("\n")
 }
 
 function PreviewPageShell({
@@ -1236,6 +1275,27 @@ export default function ReportBuilderPage() {
     }
   }
 
+  function handleSendWhatsApp() {
+    const validationError = validateDraft(draft)
+    if (validationError) {
+      showFeedback({ tone: "error", message: validationError })
+      return
+    }
+
+    const message = buildWhatsAppDraftMessage(draft)
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    const openedWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+
+    if (!openedWindow) {
+      window.location.href = whatsappUrl
+    }
+
+    showFeedback({
+      tone: "success",
+      message: "Abrimos o WhatsApp com a mensagem do relatório pronta para envio.",
+    })
+  }
+
   return (
     <>
       <Header
@@ -1291,7 +1351,7 @@ export default function ReportBuilderPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-5">
               <button
                 type="button"
                 onClick={() => handleSave("update")}
@@ -1315,6 +1375,14 @@ export default function ReportBuilderPage() {
               >
                 <Copy className="h-4 w-4" />
                 Duplicar
+              </button>
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#cfdcf5] bg-white px-4 py-3 text-sm font-semibold text-[#25D366] transition hover:bg-[#eefcf4]"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Enviar WhatsApp
               </button>
               <button
                 type="button"

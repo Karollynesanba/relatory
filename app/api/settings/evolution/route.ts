@@ -6,6 +6,7 @@ import {
   findEvolutionInstanceMatch,
 } from "@/lib/evolution-api"
 import {
+  getDefaultEvolutionInstance,
   normalizeEvolutionInstancePreference,
   resolveUserEvolutionInstance,
 } from "@/lib/evolution-preference"
@@ -67,11 +68,16 @@ export async function GET(request: Request) {
     const previewInstance = normalizeEvolutionInstancePreference(
       requestUrl.searchParams.get("previewInstance")
     )
+    const config = getEvolutionConfig()
     const selectedInstance =
       (await resolveUserEvolutionInstance(user.id)) ??
       normalizeEvolutionInstancePreference(user.evolutionInstance ?? null)
-    const config = getEvolutionConfig()
-    const effectiveGroupInstance = previewInstance || selectedInstance || null
+    const effectiveGroupInstance =
+      previewInstance ||
+      selectedInstance ||
+      getDefaultEvolutionInstance() ||
+      config.instance ||
+      null
 
     if (!effectiveGroupInstance) {
       return NextResponse.json<EvolutionSettingsResponse>({

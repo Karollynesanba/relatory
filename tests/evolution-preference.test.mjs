@@ -1,5 +1,6 @@
 import { assert, test } from "./test-helpers.mjs"
 import {
+  getDefaultEvolutionInstance,
   getEvolutionInstanceForMetaPreset,
   resolveUserEvolutionInstance,
 } from "@/lib/evolution-preference"
@@ -97,4 +98,29 @@ test("areEquivalentEvolutionInstances treats the Isaque label and alias as the s
     areEquivalentEvolutionInstances("Isaque - GreatGo", "Carlos"),
     false
   )
+})
+
+test("resolveUserEvolutionInstance falls back to the default Evolution instance from env", async () => {
+  const previousDefaultInstance = process.env.EVOLUTION_INSTANCE
+  process.env.EVOLUTION_INSTANCE = "GreatGo"
+
+  try {
+    assert.equal(getDefaultEvolutionInstance(), "GreatGo")
+
+    const instance = await resolveUserEvolutionInstance({
+      id: "user-5",
+      name: "Equipe sem instancia",
+      email: "sem-instancia@example.com",
+      evolutionInstance: null,
+      metaAccessToken: null,
+    })
+
+    assert.equal(instance, "GreatGo")
+  } finally {
+    if (previousDefaultInstance == null) {
+      delete process.env.EVOLUTION_INSTANCE
+    } else {
+      process.env.EVOLUTION_INSTANCE = previousDefaultInstance
+    }
+  }
 })

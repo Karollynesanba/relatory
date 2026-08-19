@@ -9,6 +9,10 @@ function normalizeInstanceName(value: unknown) {
   return typeof value === "string" ? value.trim() || null : null
 }
 
+export function getDefaultEvolutionInstance() {
+  return normalizeInstanceName(process.env.EVOLUTION_INSTANCE)
+}
+
 const META_PRESET_TO_EVOLUTION_INSTANCE: Record<MetaTokenPreset, string> = {
   ISAQUE: "Isaque - GreatGo",
   BRAYTON: "Brayton - GreatGo",
@@ -78,7 +82,7 @@ function resolveUserEvolutionInstanceFromProfile(profile: {
     return presetInstance
   }
 
-  return null
+  return getDefaultEvolutionInstance()
 }
 
 export async function resolveUserEvolutionInstance(

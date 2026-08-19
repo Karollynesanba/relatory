@@ -162,3 +162,21 @@ Windows:
 - para iniciar o daemon manualmente no Windows, use `npm run report:windows:daemon:run`
 - para remover a tarefa agendada, use `npm run report:windows:daemon:uninstall`
 - os logs do launcher ficam em `.codex-report-daemon.out.log` e `.codex-report-daemon.err.log`
+
+---
+
+# Evolution / WhatsApp
+
+O envio para WhatsApp ja esta integrado via Evolution API. Para habilitar:
+
+1. preencha `EVOLUTION_API_URL`, `EVOLUTION_API_KEY` e `EVOLUTION_INSTANCE` no `.env.local`
+2. abra `/dashboard/settings` e confira a secao `Conexao Evolution`
+3. selecione ou confirme a instancia que deve ser usada
+4. no cadastro do cliente, escolha o grupo correto no campo `ID do Grupo WhatsApp`
+5. gere ou abra um relatorio e use a acao de envio
+
+Observacoes importantes:
+
+- `EVOLUTION_INSTANCE` agora funciona como fallback padrao quando o usuario ainda nao salvou uma instancia propria
+- se a Evolution estiver conectada, a tela de configuracoes lista os grupos disponiveis para copiar ou selecionar
+- o envio manual e automatico usa o `whatsappGroupId` salvo no cliente ou no agendamento do relatorio
