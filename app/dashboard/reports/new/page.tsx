@@ -1350,26 +1350,7 @@ export default function ReportBuilderPage() {
       setIsSendingWhatsApp(true)
 
       try {
-        const { pdf, fileName, pdfFile, message } = await buildPdfDocument()
-
-        if (
-          typeof navigator !== "undefined" &&
-          "share" in navigator &&
-          "canShare" in navigator &&
-          navigator.canShare({ files: [pdfFile] })
-        ) {
-          await navigator.share({
-            title: buildPreviewTitle(draft),
-            text: message,
-            files: [pdfFile],
-          })
-
-          showFeedback({
-            tone: "success",
-            message: "PDF pronto para compartilhar no WhatsApp.",
-          })
-          return
-        }
+        const { pdf, fileName } = await buildPdfDocument()
 
         pdf.save(fileName)
         const whatsAppUrl = "https://web.whatsapp.com/"
@@ -1386,7 +1367,7 @@ export default function ReportBuilderPage() {
         showFeedback({
           tone: "success",
           message:
-            "PDF baixado e WhatsApp aberto para você anexar o arquivo.",
+            "PDF baixado e WhatsApp Web aberto para você anexar o arquivo.",
         })
       } catch (error) {
         showFeedback({
