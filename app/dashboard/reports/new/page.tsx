@@ -80,7 +80,6 @@ type SavedReportRecord = {
 
 const WORKSPACE_KEY = "greatgo-report-builder-workspace-v1"
 const RECORDS_KEY = "greatgo-report-builder-records-v1"
-const WHATSAPP_DESTINATION_KEY = "greatgo-report-builder-whatsapp-destination-v1"
 
 const DEFAULT_DRAFT: ReportDraft = {
   generalFields: [
@@ -1045,7 +1044,6 @@ export default function ReportBuilderPage() {
   const [feedback, setFeedback] = useState<Feedback>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false)
-  const [whatsAppDestination, setWhatsAppDestination] = useState("")
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor")
   const [zoom, setZoom] = useState(85)
 
@@ -1068,11 +1066,6 @@ export default function ReportBuilderPage() {
       setLastSavedAt(lastRecord.updatedAt)
     }
 
-    const savedWhatsAppDestination = readJson<string>(WHATSAPP_DESTINATION_KEY)
-    if (typeof savedWhatsAppDestination === "string") {
-      setWhatsAppDestination(savedWhatsAppDestination)
-    }
-
     setHydrated(true)
   }, [])
 
@@ -1087,14 +1080,6 @@ export default function ReportBuilderPage() {
       draft,
     } satisfies WorkspacePayload)
   }, [currentReportId, draft, hydrated, lastSavedAt])
-
-  useEffect(() => {
-    if (!hydrated) {
-      return
-    }
-
-    writeJson(WHATSAPP_DESTINATION_KEY, whatsAppDestination)
-  }, [hydrated, whatsAppDestination])
 
   const visibleCampaigns = useMemo(
     () => draft.campaigns.filter((campaign) => !campaign.hidden),
@@ -1266,9 +1251,15 @@ export default function ReportBuilderPage() {
       endDate: fields["end-date"] || "2026-01-01",
     })}.pdf`
 
+    const pdfBlob = pdf.output("blob")
+    const pdfFile = new File([pdfBlob], fileName, {
+      type: "application/pdf",
+    })
+
     return {
       pdf,
       fileName,
+      pdfFile,
       message: buildWhatsAppDraftMessage(draft),
     }
   }
@@ -1303,45 +1294,47 @@ export default function ReportBuilderPage() {
       return
     }
 
-    if (!whatsAppDestination.trim()) {
-      showFeedback({
-        tone: "error",
-        message:
-          "Informe o grupo ou número de WhatsApp antes de enviar o PDF.",
-      })
-      return
-    }
-
     void (async () => {
       setIsSendingWhatsApp(true)
 
       try {
-        const { pdf, fileName, message } = await buildPdfDocument()
-        const pdfBase64 = pdf.output("datauristring").split(",", 2)[1] ?? ""
-        const response = await fetch("/api/reports/builder/send-whatsapp", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            destination: whatsAppDestination,
-            message,
-            pdfBase64,
-            pdfFileName: fileName,
-          }),
-        })
+        const { pdf, fileName, pdfFile, message } = await buildPdfDocument()
 
-        const data = (await response.json().catch(() => ({}))) as {
-          error?: string
+        if (
+          typeof navigator !== "undefined" &&
+          "share" in navigator &&
+          "canShare" in navigator &&
+          navigator.canShare({ files: [pdfFile] })
+        ) {
+          await navigator.share({
+            title: buildPreviewTitle(draft),
+            text: message,
+            files: [pdfFile],
+          })
+
+          showFeedback({
+            tone: "success",
+            message: "PDF pronto para compartilhar no WhatsApp.",
+          })
+          return
         }
 
-        if (!response.ok) {
-          throw new Error(data.error || "Não foi possível enviar o PDF pelo WhatsApp.")
+        pdf.save(fileName)
+        const whatsAppUrl = "https://web.whatsapp.com/"
+        const openedWindow = window.open(
+          whatsAppUrl,
+          "_blank",
+          "noopener,noreferrer"
+        )
+
+        if (!openedWindow) {
+          window.location.href = whatsAppUrl
         }
 
         showFeedback({
           tone: "success",
-          message: "PDF enviado com sucesso para o WhatsApp via Evolution.",
+          message:
+            "PDF baixado e WhatsApp aberto para você anexar o arquivo.",
         })
       } catch (error) {
         showFeedback({
@@ -1454,24 +1447,6 @@ export default function ReportBuilderPage() {
                 <FileText className="h-4 w-4" />
                 Criar relatório
               </button>
-            </div>
-
-            <div className="rounded-[22px] border border-[#d8e3f5] bg-white p-4">
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Destino do WhatsApp
-                </span>
-                <input
-                  type="text"
-                  value={whatsAppDestination}
-                  onChange={(event) => setWhatsAppDestination(event.target.value)}
-                  placeholder="120363407411420148@g.us ou 5511999999999"
-                  className="mt-2 w-full rounded-2xl border border-[#d8e3f5] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#25D366]/30 focus:ring-4 focus:ring-[#25D366]/10"
-                />
-              </label>
-              <p className="mt-2 text-xs text-slate-500">
-                Use o ID do grupo da Evolution ou um número com DDI. Esse destino fica salvo neste navegador.
-              </p>
             </div>
 
             {feedback ? (
