@@ -1043,6 +1043,7 @@ export default function ReportBuilderPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<Feedback>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false)
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor")
   const [zoom, setZoom] = useState(85)
 
@@ -1204,60 +1205,65 @@ export default function ReportBuilderPage() {
     }))
   }
 
-  async function handleDownloadPdf() {
+  async function buildPdfDocument() {
     if (!previewRef.current) {
-      showFeedback({
-        tone: "error",
-        message: "A prévia ainda não está pronta para exportação.",
-      })
-      return
+      throw new Error("A prévia ainda não está pronta para exportação.")
     }
 
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ])
+
+    const pages = Array.from(
+      previewRef.current.querySelectorAll<HTMLElement>("[data-preview-page]")
+    )
+
+    if (pages.length === 0) {
+      throw new Error("Nenhuma página encontrada na prévia.")
+    }
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+
+    for (let index = 0; index < pages.length; index += 1) {
+      const page = pages[index]
+      const canvas = await html2canvas(page, {
+        scale: 2,
+        backgroundColor: "#f4f7fb",
+        useCORS: true,
+      })
+      const imgData = canvas.toDataURL("image/png")
+      const imgHeight = (canvas.height * pageWidth) / canvas.width
+
+      if (index > 0) {
+        pdf.addPage()
+      }
+
+      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, Math.min(pageHeight, imgHeight))
+    }
+
+    const fields = fieldValueMap(draft.generalFields)
+    const fileName = `${buildReportPdfFileName({
+      clientName: fields["client-name"] || "relatorio",
+      startDate: fields["start-date"] || "2026-01-01",
+      endDate: fields["end-date"] || "2026-01-01",
+    })}.pdf`
+
+    return {
+      pdf,
+      fileName,
+      message: buildWhatsAppDraftMessage(draft),
+    }
+  }
+
+  async function handleDownloadPdf() {
     setIsExporting(true)
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ])
-
-      const pages = Array.from(
-        previewRef.current.querySelectorAll<HTMLElement>("[data-preview-page]")
-      )
-
-      if (pages.length === 0) {
-        throw new Error("Nenhuma página encontrada na prévia.")
-      }
-
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const page = pages[index]
-        const canvas = await html2canvas(page, {
-          scale: 2,
-          backgroundColor: "#f4f7fb",
-          useCORS: true,
-        })
-        const imgData = canvas.toDataURL("image/png")
-        const imgHeight = (canvas.height * pageWidth) / canvas.width
-
-        if (index > 0) {
-          pdf.addPage()
-        }
-
-        pdf.addImage(imgData, "PNG", 0, 0, pageWidth, Math.min(pageHeight, imgHeight))
-      }
-
-      const fields = fieldValueMap(draft.generalFields)
-      pdf.save(
-        `${buildReportPdfFileName({
-          clientName: fields["client-name"] || "relatorio",
-          startDate: fields["start-date"] || "2026-01-01",
-          endDate: fields["end-date"] || "2026-01-01",
-        })}.pdf`
-      )
+      const { pdf, fileName } = await buildPdfDocument()
+      pdf.save(fileName)
       showFeedback({
         tone: "success",
         message: "PDF gerado com a mesma prévia exibida na tela.",
@@ -1282,18 +1288,52 @@ export default function ReportBuilderPage() {
       return
     }
 
-    const message = buildWhatsAppDraftMessage(draft)
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
-    const openedWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+    void (async () => {
+      setIsSendingWhatsApp(true)
 
-    if (!openedWindow) {
-      window.location.href = whatsappUrl
-    }
+      try {
+        const { pdf, fileName, message } = await buildPdfDocument()
+        const pdfBlob = pdf.output("blob")
+        const pdfFile = new File([pdfBlob], fileName, {
+          type: "application/pdf",
+        })
 
-    showFeedback({
-      tone: "success",
-      message: "Abrimos o WhatsApp com a mensagem do relatório pronta para envio.",
-    })
+        if (
+          typeof navigator !== "undefined" &&
+          "share" in navigator &&
+          "canShare" in navigator &&
+          navigator.canShare({ files: [pdfFile] })
+        ) {
+          await navigator.share({
+            title: buildPreviewTitle(draft),
+            text: message,
+            files: [pdfFile],
+          })
+
+          showFeedback({
+            tone: "success",
+            message: "PDF pronto para envio no WhatsApp pelo compartilhamento do aparelho.",
+          })
+          return
+        }
+
+        showFeedback({
+          tone: "error",
+          message:
+            "Este navegador não permite anexar PDF direto no WhatsApp. Use um celular compatível com compartilhar arquivo ou o fluxo da Evolution para envio automático.",
+        })
+      } catch (error) {
+        showFeedback({
+          tone: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Não foi possível preparar o PDF para envio no WhatsApp.",
+        })
+      } finally {
+        setIsSendingWhatsApp(false)
+      }
+    })()
   }
 
   return (
@@ -1379,10 +1419,11 @@ export default function ReportBuilderPage() {
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#cfdcf5] bg-white px-4 py-3 text-sm font-semibold text-[#25D366] transition hover:bg-[#eefcf4]"
+                disabled={isSendingWhatsApp}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#cfdcf5] bg-white px-4 py-3 text-sm font-semibold text-[#25D366] transition hover:bg-[#eefcf4] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <MessageCircle className="h-4 w-4" />
-                Enviar WhatsApp
+                {isSendingWhatsApp ? "Preparando PDF..." : "Enviar WhatsApp"}
               </button>
               <button
                 type="button"
