@@ -1350,7 +1350,26 @@ export default function ReportBuilderPage() {
       setIsSendingWhatsApp(true)
 
       try {
-        const { pdf, fileName } = await buildPdfDocument()
+        const { pdf, fileName, pdfFile, message } = await buildPdfDocument()
+
+        if (
+          typeof navigator !== "undefined" &&
+          "share" in navigator &&
+          "canShare" in navigator &&
+          navigator.canShare({ files: [pdfFile] })
+        ) {
+          await navigator.share({
+            title: buildPreviewTitle(draft),
+            text: message,
+            files: [pdfFile],
+          })
+
+          showFeedback({
+            tone: "success",
+            message: "PDF pronto para compartilhar. Escolha o WhatsApp e depois a conversa.",
+          })
+          return
+        }
 
         pdf.save(fileName)
         const whatsAppUrl = "https://web.whatsapp.com/"
@@ -1370,6 +1389,14 @@ export default function ReportBuilderPage() {
             "PDF baixado e WhatsApp Web aberto para você anexar o arquivo.",
         })
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          showFeedback({
+            tone: "neutral",
+            message: "Compartilhamento cancelado.",
+          })
+          return
+        }
+
         showFeedback({
           tone: "error",
           message:
