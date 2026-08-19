@@ -1234,14 +1234,14 @@ export default function ReportBuilderPage() {
         backgroundColor: "#f4f7fb",
         useCORS: true,
       })
-      const imgData = canvas.toDataURL("image/png")
+      const imgData = canvas.toDataURL("image/jpeg", 0.98)
       const imgHeight = (canvas.height * pageWidth) / canvas.width
 
       if (index > 0) {
         pdf.addPage()
       }
 
-      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, Math.min(pageHeight, imgHeight))
+      pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, Math.min(pageHeight, imgHeight))
     }
 
     const fields = fieldValueMap(draft.generalFields)
